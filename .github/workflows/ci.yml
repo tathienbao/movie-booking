@@ -32,10 +32,24 @@ jobs:
     - name: Test Docker image
       run: |
         docker run -d -p 8080:8080 --name test-container movie-booking-api:${{ github.sha }}
-        sleep 10
-        curl -f http://localhost:8080/api/movies || exit 1
+        echo "Waiting for application to start..."
+        sleep 15
+        echo "Testing API endpoint..."
+        for i in {1..5}; do
+          if curl -f http://localhost:8080/api/movies; then
+            echo "API is responding!"
+            docker stop test-container
+            docker rm test-container
+            exit 0
+          fi
+          echo "Attempt $i failed, retrying..."
+          sleep 3
+        done
+        echo "API failed to respond after 5 attempts"
+        docker logs test-container
         docker stop test-container
         docker rm test-container
+        exit 1
 
     - name: Upload JAR
       uses: actions/upload-artifact@v3

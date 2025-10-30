@@ -1,0 +1,44 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: maven
+
+    - name: Build with Maven
+      run: mvn clean package -DskipTests
+
+    - name: Run tests
+      run: mvn test
+
+    - name: Build Docker image
+      run: docker build -t movie-booking-api:${{ github.sha }} .
+
+    - name: Test Docker image
+      run: |
+        docker run -d -p 8080:8080 --name test-container movie-booking-api:${{ github.sha }}
+        sleep 10
+        curl -f http://localhost:8080/api/movies || exit 1
+        docker stop test-container
+        docker rm test-container
+
+    - name: Upload JAR
+      uses: actions/upload-artifact@v3
+      with:
+        name: movie-booking-api
+        path: target/movie-booking-api-*.jar

@@ -149,7 +149,7 @@ main (Production-ready core backend)
 - REST API consumption
 - Full-stack integration
 
-**Use Case:** Demonstrates full-stack capability and Vue.js knowledge (Viking Line requirement!)
+**Use Case:** Demonstrates full-stack capability and Vue.js 3 knowledge
 
 ---
 
@@ -208,13 +208,13 @@ main (Production-ready core backend)
    - "I believe in automated testing, so I added comprehensive test coverage"
 
 4. **Show `feature/vuejs-frontend`** - Prove full-stack capability
-   - "Since Viking Line uses Vue.js, I built a frontend to demonstrate my full-stack skills"
+   - "I built a Vue.js 3 frontend to demonstrate my full-stack skills"
 
 **Key Message:** "I organized the project in branches to show progression from core backend to full-stack application"
 
 ---
 
-## Viking Line Job Requirements Coverage
+## Enterprise Job Requirements Coverage
 
 | Requirement | Branch | Status |
 |-------------|--------|--------|

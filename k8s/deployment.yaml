@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: movie-booking-api
+  labels:
+    app: movie-booking-api
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: movie-booking-api
+  template:
+    metadata:
+      labels:
+        app: movie-booking-api
+    spec:
+      containers:
+      - name: movie-booking-api
+        image: movie-booking-api:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+          name: http
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /api/movies
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /api/movies
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 5

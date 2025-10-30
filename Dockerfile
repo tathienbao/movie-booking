@@ -22,7 +22,7 @@ FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
 
 # Copy the JAR from builder stage
-COPY --from=builder /app/target/*.jar app.jar
+COPY --from=builder /app/target/movie-booking-api-1.0.0.jar app.jar
 
 # Expose port 8080
 EXPOSE 8080

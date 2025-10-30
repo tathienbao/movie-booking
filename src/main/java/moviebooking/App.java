@@ -13,7 +13,7 @@ import java.net.URI;
  */
 public class App {
 
-    private static final String BASE_URI = "http://localhost:8080/";
+    private static final String BASE_URI = "http://0.0.0.0:8080/";
 
     /**
      * Starts Grizzly HTTP server exposing JAX-RS resources.

@@ -31,20 +31,42 @@ A Jakarta EE 10 REST API demo project built with JAX-RS, Jersey, and Grizzly HTT
 
 ## 🏃 Running the Application
 
-### Option 1: Maven
+### Option 1: Automated Local Development (Recommended)
+
+**One command to build, run, and test everything:**
+
+```bash
+./scripts/run-local.sh
+```
+
+This script automatically:
+- Cleans up old containers
+- Builds Maven package
+- Builds Docker image
+- Starts container
+- Tests the API
+- Shows you the status
+
+**Quick API test (when already running):**
+
+```bash
+./scripts/test-api.sh
+```
+
+### Option 2: Maven
 
 ```bash
 mvn exec:java -Dexec.mainClass="moviebooking.App"
 ```
 
-### Option 2: Standalone JAR
+### Option 3: Standalone JAR
 
 ```bash
 mvn clean package
 java -jar target/movie-booking-api-1.0.0.jar
 ```
 
-### Option 3: Docker
+### Option 4: Docker Manual
 
 ```bash
 docker build -t movie-booking-api .
@@ -111,6 +133,28 @@ This project includes:
 Multi-stage Dockerfile for optimized image size:
 - Build stage: Compiles and packages the application
 - Runtime stage: Runs the Fat JAR with minimal footprint
+
+## ☸️ Kubernetes
+
+Deploy to Kubernetes cluster:
+
+```bash
+# Apply deployment and service
+kubectl apply -f k8s/deployment.yaml
+kubectl apply -f k8s/service.yaml
+
+# Check status
+kubectl get pods
+kubectl get services
+
+# Access the API
+kubectl port-forward service/movie-booking-api 8080:80
+curl http://localhost:8080/api/movies
+```
+
+**Kubernetes resources included:**
+- `deployment.yaml` - 3 replicas with health checks and resource limits
+- `service.yaml` - LoadBalancer service exposing port 80
 
 ## 🎯 Features
 

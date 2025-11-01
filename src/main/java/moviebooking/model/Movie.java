@@ -56,8 +56,15 @@ public class Movie {
         return title;
     }
 
+    /**
+     * CRITICAL FIX: Setter validation
+     * Prevents bypassing service layer validation by calling setter directly.
+     */
     public void setTitle(String title) {
-        this.title = title;
+        if (title == null || title.trim().isEmpty()) {
+            throw new IllegalArgumentException("Title cannot be empty");
+        }
+        this.title = title.trim();
     }
 
     public String getDescription() {
@@ -65,22 +72,38 @@ public class Movie {
     }
 
     public void setDescription(String description) {
-        this.description = description;
+        if (description != null) {
+            this.description = description.trim();
+        } else {
+            this.description = null;
+        }
     }
 
     public String getGenre() {
         return genre;
     }
 
+    /**
+     * CRITICAL FIX: Setter validation
+     */
     public void setGenre(String genre) {
-        this.genre = genre;
+        if (genre == null || genre.trim().isEmpty()) {
+            throw new IllegalArgumentException("Genre cannot be empty");
+        }
+        this.genre = genre.trim();
     }
 
     public Integer getDurationMinutes() {
         return durationMinutes;
     }
 
+    /**
+     * CRITICAL FIX: Setter validation
+     */
     public void setDurationMinutes(Integer durationMinutes) {
+        if (durationMinutes == null || durationMinutes <= 0) {
+            throw new IllegalArgumentException("Duration must be positive (got: " + durationMinutes + ")");
+        }
         this.durationMinutes = durationMinutes;
     }
 
@@ -88,7 +111,13 @@ public class Movie {
         return price;
     }
 
+    /**
+     * CRITICAL FIX: Setter validation
+     */
     public void setPrice(Double price) {
+        if (price == null || price <= 0) {
+            throw new IllegalArgumentException("Price must be positive (got: " + price + ")");
+        }
         this.price = price;
     }
 

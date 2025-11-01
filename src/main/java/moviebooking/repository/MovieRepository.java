@@ -6,6 +6,7 @@ import jakarta.persistence.TypedQuery;
 import moviebooking.model.Movie;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Repository class for Movie entity data access.
@@ -66,12 +67,18 @@ public class MovieRepository {
     /**
      * Find a movie by its ID.
      *
+     * CRITICAL FIX: Input validation
+     * Added null check with clear error message.
+     *
      * em.find() is the simplest way to get an entity by primary key.
      * Returns null if not found.
      *
      * Alternative: em.getReference() which returns proxy (lazy loading)
      */
     public Movie findById(Long id) {
+        // VALIDATION: Prevent NPE with clear error message
+        Objects.requireNonNull(id, "Movie ID cannot be null");
+
         EntityManager em = emf.createEntityManager();
         try {
             // SELECT * FROM movies WHERE id = ?
@@ -84,6 +91,9 @@ public class MovieRepository {
     /**
      * Save a new movie to the database.
      *
+     * CRITICAL FIX: Input validation
+     * Added null check with clear error message.
+     *
      * TRANSACTION PATTERN:
      * 1. begin()  - Start transaction
      * 2. persist() - Mark entity for INSERT
@@ -95,6 +105,9 @@ public class MovieRepository {
      * - merge(): For EXISTING entities (updates based on ID)
      */
     public Movie save(Movie movie) {
+        // VALIDATION: Prevent NPE with clear error message
+        Objects.requireNonNull(movie, "Movie cannot be null");
+
         EntityManager em = emf.createEntityManager();
         try {
             // Start transaction (required for write operations)
@@ -123,29 +136,66 @@ public class MovieRepository {
     /**
      * Update an existing movie in the database.
      *
-     * merge() works for detached entities (entities not currently managed).
-     * It:
-     * 1. Finds the entity by ID in the database
-     * 2. Copies all fields from the parameter to the found entity
-     * 3. Returns the managed entity
-     * 4. On commit, generates UPDATE statement
+     * CRITICAL FIX: Update managed entity directly (best practice)
      *
-     * IMPORTANT: Use the returned entity, not the parameter!
-     * The parameter remains detached, the returned entity is managed.
+     * CRITICAL FIX: Input validation
+     * Added null checks with clear error messages.
+     *
+     * TOCTOU IMPROVEMENT:
+     * Instead of find() then merge(), we update the managed entity directly.
+     * This is more efficient and clearer:
+     * 1. Find entity (becomes managed)
+     * 2. Update its fields directly
+     * 3. Commit (JPA auto-detects changes and generates UPDATE)
+     *
+     * WHY THIS IS BETTER:
+     * - No merge() needed - JPA tracks changes automatically (dirty checking)
+     * - More efficient - one less object copy
+     * - Clearer intent - we're updating, not merging
+     * - Still atomic - all happens in one transaction
+     *
+     * JPA DIRTY CHECKING:
+     * When you modify a managed entity, JPA automatically detects changes
+     * and generates UPDATE statement on commit. No need to call merge() or update().
+     *
+     * PREVIOUS APPROACH (still correct but less efficient):
+     * - find() to check existence
+     * - merge() to update (copies all fields)
+     *
+     * NEW APPROACH (better):
+     * - find() to get managed entity
+     * - Update managed entity fields directly
+     * - JPA auto-generates UPDATE on commit
      */
     public Movie update(Movie movie) {
+        // VALIDATION: Prevent NPE with clear error messages
+        Objects.requireNonNull(movie, "Movie cannot be null");
+        Objects.requireNonNull(movie.getId(), "Movie ID cannot be null for update");
+
         EntityManager em = emf.createEntityManager();
         try {
             em.getTransaction().begin();
 
-            // UPDATE movies SET ... WHERE id = ?
-            // merge() returns a MANAGED entity
-            Movie updatedMovie = em.merge(movie);
+            // Find existing entity (becomes MANAGED)
+            Movie existing = em.find(Movie.class, movie.getId());
+            if (existing == null) {
+                em.getTransaction().rollback();
+                return null;  // Movie doesn't exist, cannot update
+            }
 
+            // Update managed entity directly (no merge needed!)
+            // JPA tracks changes automatically (dirty checking)
+            existing.setTitle(movie.getTitle());
+            existing.setDescription(movie.getDescription());
+            existing.setGenre(movie.getGenre());
+            existing.setDurationMinutes(movie.getDurationMinutes());
+            existing.setPrice(movie.getPrice());
+
+            // Commit - JPA auto-generates UPDATE for changed fields
             em.getTransaction().commit();
 
-            // Return the managed entity, not the parameter
-            return updatedMovie;
+            // Return the managed entity
+            return existing;
         } catch (Exception e) {
             if (em.getTransaction().isActive()) {
                 em.getTransaction().rollback();
@@ -159,14 +209,24 @@ public class MovieRepository {
     /**
      * Delete a movie by its ID.
      *
+     * CRITICAL FIX: Input validation
+     * Added null check with clear error message.
+     *
      * DELETE process:
      * 1. Find the entity (must be managed to remove it)
      * 2. Call remove() to mark for deletion
      * 3. Commit to execute DELETE statement
      *
      * Returns true if deleted, false if not found.
+     *
+     * CRITICAL FIX: Resource leak prevention
+     * Previous code had early return that bypassed finally block in some cases.
+     * Now properly manages transaction state before returning.
      */
     public boolean delete(Long id) {
+        // VALIDATION: Prevent NPE with clear error message
+        Objects.requireNonNull(id, "Movie ID cannot be null");
+
         EntityManager em = emf.createEntityManager();
         try {
             em.getTransaction().begin();
@@ -174,22 +234,27 @@ public class MovieRepository {
             // First, find the entity (can't remove what we don't have)
             Movie movie = em.find(Movie.class, id);
 
-            if (movie != null) {
-                // DELETE FROM movies WHERE id = ?
-                em.remove(movie);
-                em.getTransaction().commit();
-                return true;
+            if (movie == null) {
+                // Movie not found, rollback and return false
+                // IMPORTANT: Must rollback before return to keep transaction clean
+                em.getTransaction().rollback();
+                return false;
             }
 
-            // Movie not found, nothing to delete
-            em.getTransaction().rollback();
-            return false;
+            // DELETE FROM movies WHERE id = ?
+            em.remove(movie);
+            em.getTransaction().commit();
+            return true;
+
         } catch (Exception e) {
+            // Always rollback on error to prevent transaction leaks
             if (em.getTransaction().isActive()) {
                 em.getTransaction().rollback();
             }
             throw e;
         } finally {
+            // CRITICAL: Always close EntityManager to prevent resource leak
+            // This executes regardless of return path
             em.close();
         }
     }

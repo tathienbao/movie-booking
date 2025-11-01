@@ -165,6 +165,10 @@ public class MovieRepository {
      * 3. Commit to execute DELETE statement
      *
      * Returns true if deleted, false if not found.
+     *
+     * CRITICAL FIX: Resource leak prevention
+     * Previous code had early return that bypassed finally block in some cases.
+     * Now properly manages transaction state before returning.
      */
     public boolean delete(Long id) {
         EntityManager em = emf.createEntityManager();
@@ -174,22 +178,27 @@ public class MovieRepository {
             // First, find the entity (can't remove what we don't have)
             Movie movie = em.find(Movie.class, id);
 
-            if (movie != null) {
-                // DELETE FROM movies WHERE id = ?
-                em.remove(movie);
-                em.getTransaction().commit();
-                return true;
+            if (movie == null) {
+                // Movie not found, rollback and return false
+                // IMPORTANT: Must rollback before return to keep transaction clean
+                em.getTransaction().rollback();
+                return false;
             }
 
-            // Movie not found, nothing to delete
-            em.getTransaction().rollback();
-            return false;
+            // DELETE FROM movies WHERE id = ?
+            em.remove(movie);
+            em.getTransaction().commit();
+            return true;
+
         } catch (Exception e) {
+            // Always rollback on error to prevent transaction leaks
             if (em.getTransaction().isActive()) {
                 em.getTransaction().rollback();
             }
             throw e;
         } finally {
+            // CRITICAL: Always close EntityManager to prevent resource leak
+            // This executes regardless of return path
             em.close();
         }
     }

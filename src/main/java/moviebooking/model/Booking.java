@@ -1,5 +1,6 @@
 package moviebooking.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.Objects;
@@ -21,8 +22,26 @@ public class Booking {
     @Column(nullable = false)
     private String customerEmail;
 
+    /**
+     * CRITICAL FIX: Prevent infinite JSON recursion
+     *
+     * @JsonBackReference tells Jackson to skip serialization of this field
+     * when serializing Booking to JSON. This prevents infinite loops when:
+     * - Movie has @OneToMany List<Booking> bookings
+     * - Booking has @ManyToOne Movie movie
+     *
+     * Without this annotation, Jackson would serialize:
+     * Movie → Bookings → Movie → Bookings → ... (infinite loop!)
+     *
+     * The @JsonBackReference annotation breaks the cycle by not serializing
+     * the "back" reference (Booking → Movie).
+     *
+     * If Movie entity adds @OneToMany bookings field in the future,
+     * it should use @JsonManagedReference on that field.
+     */
     @ManyToOne
     @JoinColumn(name = "movie_id", nullable = false)
+    @JsonBackReference
     private Movie movie;
 
     @Column(nullable = false)
@@ -39,8 +58,21 @@ public class Booking {
         this.bookingTime = LocalDateTime.now();
     }
 
-    // Constructor
+    /**
+     * Constructor with validation
+     *
+     * CRITICAL FIX: Null pointer prevention
+     * Added validation to prevent NPE when accessing movie.getPrice()
+     */
     public Booking(String customerName, String customerEmail, Movie movie, Integer numberOfSeats) {
+        // VALIDATION: Prevent NPE
+        Objects.requireNonNull(movie, "Movie cannot be null");
+        Objects.requireNonNull(numberOfSeats, "Number of seats cannot be null");
+
+        if (numberOfSeats <= 0) {
+            throw new IllegalArgumentException("Number of seats must be positive");
+        }
+
         this.customerName = customerName;
         this.customerEmail = customerEmail;
         this.movie = movie;

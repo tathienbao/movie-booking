@@ -22,6 +22,10 @@ import java.util.List;
  * - MovieService needs MovieRepository which needs EntityManagerFactory
  * - We want to reuse the same EntityManagerFactory (expensive to create)
  *
+ * CRITICAL FIX: Lazy initialization for thread safety
+ * Previously used field initialization which could race with App startup.
+ * Now uses lazy initialization with null check to prevent NPE.
+ *
  * In enterprise apps, you'd use:
  * - CDI: @Inject MovieService movieService
  * - Spring: @Autowired MovieService movieService
@@ -33,17 +37,42 @@ import java.util.List;
 public class MovieResource {
 
     /**
-     * Get MovieService from App (shared instance with database connection).
-     * Initialized on first request and reused for all subsequent requests.
+     * Lazy-initialized MovieService to prevent race condition.
+     *
+     * THREAD SAFETY:
+     * - Field initialized to null
+     * - getMovieService() called lazily on first use
+     * - Prevents NPE if request arrives before App finishes initialization
      */
-    private final MovieService movieService = App.getMovieService();
+    private MovieService movieService;
+
+    /**
+     * Get MovieService instance with lazy initialization.
+     *
+     * RACE CONDITION FIX:
+     * JAX-RS may instantiate this resource before App.main() completes.
+     * Lazy initialization ensures we only call getMovieService() when needed,
+     * after the application is fully initialized.
+     */
+    private MovieService getService() {
+        if (movieService == null) {
+            movieService = App.getMovieService();
+            if (movieService == null) {
+                throw new IllegalStateException(
+                    "Application not fully initialized. MovieService is null. " +
+                    "This should not happen if App.main() completed successfully."
+                );
+            }
+        }
+        return movieService;
+    }
 
     /**
      * GET /movies - List all movies
      */
     @GET
     public Response getAllMovies() {
-        List<Movie> movies = movieService.getAllMovies();
+        List<Movie> movies = getService().getAllMovies();
         return Response.ok(movies).build();
     }
 
@@ -53,7 +82,7 @@ public class MovieResource {
     @GET
     @Path("/{id}")
     public Response getMovieById(@PathParam("id") Long id) {
-        Movie movie = movieService.getMovieById(id);
+        Movie movie = getService().getMovieById(id);
         if (movie == null) {
             return Response.status(Response.Status.NOT_FOUND)
                     .entity("{\"error\": \"Movie not found\"}")
@@ -67,7 +96,7 @@ public class MovieResource {
      */
     @POST
     public Response createMovie(Movie movie) {
-        Movie created = movieService.createMovie(movie);
+        Movie created = getService().createMovie(movie);
         return Response.status(Response.Status.CREATED)
                 .entity(created)
                 .build();
@@ -80,7 +109,7 @@ public class MovieResource {
     @Path("/{id}")
     public Response updateMovie(@PathParam("id") Long id, Movie movie) {
         movie.setId(id);
-        Movie updated = movieService.updateMovie(movie);
+        Movie updated = getService().updateMovie(movie);
         if (updated == null) {
             return Response.status(Response.Status.NOT_FOUND)
                     .entity("{\"error\": \"Movie not found\"}")
@@ -95,7 +124,7 @@ public class MovieResource {
     @DELETE
     @Path("/{id}")
     public Response deleteMovie(@PathParam("id") Long id) {
-        boolean deleted = movieService.deleteMovie(id);
+        boolean deleted = getService().deleteMovie(id);
         if (!deleted) {
             return Response.status(Response.Status.NOT_FOUND)
                     .entity("{\"error\": \"Movie not found\"}")

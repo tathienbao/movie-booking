@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    persistence.xml - JPA Configuration File
+
+    This file configures JPA (Jakarta Persistence API) for our application.
+    JPA is a specification for Object-Relational Mapping (ORM) that allows us to
+    work with database tables as Java objects.
+
+    Location: Must be in src/main/resources/META-INF/persistence.xml
+
+    Key Concepts:
+    - Persistence Unit: A named configuration for database connections and entities
+    - Entity Manager: The interface to interact with the database (like a database session)
+    - Transaction: A unit of work that either fully succeeds or fully fails
+-->
+<persistence xmlns="https://jakarta.ee/xml/ns/persistence"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xsi:schemaLocation="https://jakarta.ee/xml/ns/persistence
+             https://jakarta.ee/xml/ns/persistence/persistence_3_0.xsd"
+             version="3.0">
+
+    <!--
+        PERSISTENCE UNIT
+
+        Name: "MovieBookingPU" - We'll use this name in code to get EntityManagerFactory
+        Transaction Type: RESOURCE_LOCAL means we manage transactions manually in code
+        (Alternative: JTA for container-managed transactions in app servers)
+    -->
+    <persistence-unit name="MovieBookingPU" transaction-type="RESOURCE_LOCAL">
+
+        <!--
+            PROVIDER
+
+            Hibernate is the JPA implementation we're using.
+            JPA is just a specification - Hibernate provides the actual implementation.
+            Other alternatives: EclipseLink, OpenJPA
+        -->
+        <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
+
+        <!--
+            ENTITY CLASSES
+
+            List all entity classes here so JPA knows which classes to map to database tables.
+            Each @Entity class becomes a table in the database.
+        -->
+        <class>moviebooking.model.Movie</class>
+        <class>moviebooking.model.Booking</class>
+
+        <properties>
+            <!-- ============================================ -->
+            <!-- DATABASE CONNECTION (JDBC) PROPERTIES        -->
+            <!-- ============================================ -->
+
+            <!--
+                JDBC Driver: The Java class that knows how to talk to H2 database
+                H2 is an in-memory/file-based database perfect for development
+            -->
+            <property name="jakarta.persistence.jdbc.driver" value="org.h2.Driver"/>
+
+            <!--
+                JDBC URL: Where is the database?
+                - jdbc:h2:file:./data/moviebooking = Store in ./data/moviebooking.mv.db file
+                - AUTO_SERVER=TRUE = Allow multiple connections to the same database file
+
+                Alternative URLs:
+                - jdbc:h2:mem:moviebooking = In-memory only (data lost on restart)
+                - jdbc:h2:tcp://localhost/~/moviebooking = Connect to H2 server
+            -->
+            <property name="jakarta.persistence.jdbc.url" value="jdbc:h2:file:./data/moviebooking;AUTO_SERVER=TRUE"/>
+
+            <!--
+                Database Credentials
+                H2 default user is "sa" (system administrator) with empty password
+            -->
+            <property name="jakarta.persistence.jdbc.user" value="sa"/>
+            <property name="jakarta.persistence.jdbc.password" value=""/>
+
+            <!-- ============================================ -->
+            <!-- HIBERNATE-SPECIFIC PROPERTIES                -->
+            <!-- ============================================ -->
+
+            <!--
+                DIALECT: Tells Hibernate which SQL dialect to use
+                Different databases have slightly different SQL syntax
+                H2Dialect = SQL optimized for H2 database
+            -->
+            <property name="hibernate.dialect" value="org.hibernate.dialect.H2Dialect"/>
+
+            <!--
+                SCHEMA AUTO-GENERATION
+
+                hibernate.hbm2ddl.auto controls how Hibernate manages your database schema:
+
+                - "create" = Drop all tables and recreate on startup (LOSE ALL DATA!)
+                - "create-drop" = Create on startup, drop on shutdown (for testing)
+                - "update" = Add new tables/columns, never delete (SAFE for development)
+                - "validate" = Only check if schema matches entities (SAFE for production)
+                - "none" = Do nothing (use manual migrations)
+
+                We use "update" so data persists between application restarts
+            -->
+            <property name="hibernate.hbm2ddl.auto" value="update"/>
+
+            <!--
+                SQL LOGGING (Development/Debugging)
+
+                - show_sql = Print all SQL queries to console
+                - format_sql = Pretty-print SQL (easier to read)
+
+                Set to false in production for better performance
+            -->
+            <property name="hibernate.show_sql" value="true"/>
+            <property name="hibernate.format_sql" value="true"/>
+
+            <!--
+                CONNECTION POOL SIZE
+
+                How many database connections to keep open simultaneously
+                - More connections = better concurrency but more resources
+                - 10 is reasonable for small applications
+                - Production apps use dedicated connection pools (HikariCP, C3P0)
+            -->
+            <property name="hibernate.connection.pool_size" value="10"/>
+
+            <!--
+                STATISTICS
+
+                Hibernate can track performance metrics (queries executed, cache hits, etc.)
+                Useful for optimization but adds overhead
+                We disable it for now
+            -->
+            <property name="hibernate.generate_statistics" value="false"/>
+        </properties>
+    </persistence-unit>
+</persistence>

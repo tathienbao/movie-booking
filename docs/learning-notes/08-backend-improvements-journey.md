@@ -2,7 +2,23 @@
 
 ## Overview
 
-This document chronicles the evolution of the Movie Booking API backend from initial implementation to production-ready code. Each improvement addresses real-world issues identified through code review, demonstrating professional software engineering practices.
+**📚 IMPORTANT: This is Historical Documentation**
+
+This document chronicles the **evolution** of the Movie Booking API backend from initial implementation to production-ready code. It shows the **iterative improvement process** through multiple code reviews and refinements.
+
+**How to Read This Document:**
+- **"Problem" sections** show the initial/intermediate implementations (not current code)
+- **"Solution" sections** show the improvements made in each iteration
+- **Final code** represents the cumulative result of all fixes (see `src/main/java/moviebooking/`)
+- Each fix builds upon previous ones, demonstrating incremental improvement
+
+**Purpose:**
+- Educational: Shows real-world code review process
+- Demonstrates how code evolves through feedback
+- Explains the "why" behind each architectural decision
+- Each improvement addresses real-world issues identified through code review
+
+**Current State:** The codebase now incorporates ALL fixes described in this document. This is a historical record of HOW we got there, not a description of current problems.
 
 ---
 
@@ -64,21 +80,23 @@ public boolean delete(Long id) {
             return true;
         }
 
-        // LEAK! Early return bypasses finally block
+        // CONFUSING CONTROL FLOW!
+        // Rollback and return mixed together makes code hard to maintain
         em.getTransaction().rollback();
-        return false;  // EntityManager never closed!
+        return false;
     } finally {
-        em.close();  // Never reached when movie is null
+        em.close();  // Actually executes (Java guarantees this)
     }
 }
 ```
 
 **Why This Is Bad:**
-- EntityManager holds database connection
-- Early return bypasses `finally` block in some JVMs
-- Connections leak over time
-- Eventually exhausts connection pool
-- Application crashes with "too many connections"
+- **NOT a resource leak** - finally blocks ALWAYS execute in Java (guaranteed by specification)
+- **Real problem is maintainability**: Early returns mixed with transaction management create confusing control flow
+- Hard to trace execution paths
+- Makes code review difficult
+- Violates single exit point principle
+- Can confuse developers who might think finally won't execute
 
 **Solution:**
 ```java
@@ -110,10 +128,11 @@ public boolean delete(Long id) {
 ```
 
 **Educational Value:**
-- Finally blocks MUST execute regardless of return statements
-- Resource management requires careful control flow
-- Early returns can hide resource leaks
-- Always test cleanup paths, not just happy paths
+- **Finally blocks ALWAYS execute in Java** - This is guaranteed by the Java Language Specification, regardless of return statements, exceptions, or break/continue
+- The real issue here is code clarity and maintainability, not resource leaks
+- Separating rollback from return makes control flow explicit and easier to understand
+- Good code should be obvious - mixing transaction management with early returns creates cognitive load
+- Single exit point pattern: One return statement makes code easier to trace and debug
 
 ---
 
@@ -139,7 +158,7 @@ public class MovieResource {
 - If MovieResource instantiates first → NPE
 - Non-deterministic failure (works sometimes, fails others)
 
-**Solution:**
+**Solution (Initial - Not Final):**
 ```java
 public class MovieResource {
     // Don't initialize during field declaration
@@ -166,6 +185,15 @@ public class MovieResource {
     }
 }
 ```
+
+**⚠️ IMPORTANT: This solution is NOT thread-safe!**
+
+This initial fix solves the race condition during application startup, but introduces a new problem:
+- Multiple threads could execute `if (movieService == null)` simultaneously
+- Both threads might initialize movieService (double initialization)
+- No happens-before guarantee (visibility issue)
+
+**Evolution:** This was refined in **Fix 6** (synchronized method) and **Fix 7** (double-checked locking with volatile) for proper thread safety and performance. See those sections for the production-ready solution.
 
 **Educational Value:**
 - Initialization order matters in concurrent systems
@@ -476,12 +504,21 @@ private MovieService getService() {
 }
 ```
 
+**⚠️ IMPORTANT: Requires Java 5+**
+
+This pattern was **broken in Java versions before Java 5** due to the old Java Memory Model. The `volatile` keyword behaves differently:
+- **Java 1.4 and earlier:** volatile only guaranteed visibility, NOT ordering - this pattern could fail
+- **Java 5+ (JSR-133):** volatile provides both visibility AND happens-before guarantees - pattern works correctly
+
+Since we're using Java 17, this is safe. Don't use this pattern if supporting older JVMs.
+
 **Why This Works:**
 
-**1. volatile Keyword:**
+**1. volatile Keyword (Java 5+):**
 - Ensures visibility across threads
-- Prevents CPU instruction reordering
-- Without volatile: Thread B might see partially constructed object
+- Prevents CPU instruction reordering through happens-before relationship
+- Creates memory barrier: all writes before volatile write are visible after volatile read
+- Without volatile: Thread B might see partially constructed object (broken reference before object initialization completes)
 
 **2. First Check (No Lock):**
 ```java
@@ -517,12 +554,13 @@ if (movieService == null) {
 | **Double-checked** | Slow (lock) | **Fast (no lock)** | ✅ Concurrent |
 
 **Educational Value:**
-- Double-checked locking is a classic pattern
-- volatile is crucial (prevents seeing half-initialized objects)
+- Double-checked locking is a classic pattern (but was broken before Java 5!)
+- **Requires Java 5+ with volatile** - this is critical for correctness
+- volatile is crucial (prevents seeing half-initialized objects through happens-before guarantees)
 - Optimizes for the common case (already initialized)
 - Only first few requests pay synchronization cost
 - Demonstrates trade-off: complexity vs performance
-- Java Memory Model: visibility, atomicity, ordering
+- Java Memory Model: visibility, atomicity, ordering - JSR-133 fixed volatile semantics
 
 ---
 
@@ -572,9 +610,15 @@ public Movie update(Movie movie) {
 - Direct update: just set fields (no copy overhead)
 
 **2. Leverages JPA Dirty Checking:**
-- JPA tracks changes to managed entities automatically
-- On commit, generates UPDATE for only changed fields
-- No need to call merge() or persist()
+- **JPA tracks changes to MANAGED entities automatically** (key requirement!)
+- Hibernate maintains a snapshot of the entity's state when it becomes managed
+- On commit, Hibernate compares current state vs snapshot to detect changes
+- Generates UPDATE SQL for only changed fields (efficient!)
+- **IMPORTANT:** Dirty checking ONLY works for entities in managed state
+  - Managed: Entity loaded by `em.find()`, `em.persist()`, or `em.merge()` within active persistence context
+  - Detached: Entity exists but EntityManager is closed - changes NOT tracked
+  - Transient: New object not yet persisted - not tracked
+- No need to call merge() or persist() for managed entities
 
 **3. Clearer Intent:**
 - We're updating an existing entity, not merging states
@@ -613,11 +657,13 @@ UPDATE movies SET price=? WHERE id=?
 ```
 
 **Educational Value:**
-- Understanding JPA entity states is crucial
-- Dirty checking is powerful automatic feature
-- Work with managed entities when possible
-- merge() has its place (detached entities) but isn't always needed
-- Efficiency: only update what changed
+- Understanding JPA entity states is crucial - managed vs detached vs transient
+- **Dirty checking only works for managed entities** - this is a key JPA concept
+- Hibernate implementation: maintains entity snapshot, compares on flush/commit
+- Work with managed entities when possible for automatic change tracking
+- merge() has its place (for detached entities) but isn't needed for managed entities
+- Efficiency: dirty checking generates SQL for only changed fields, not all fields
+- Performance: Avoid unnecessary merge() calls - they create object copies
 
 ---
 
@@ -739,11 +785,27 @@ try (Resource r = acquire()) {
 
 **Where to Validate:**
 ```
-❌ Entity Setters → Breaks JavaBean spec, conflicts with frameworks
-✅ Service Layer → Business logic validation (primary)
-✅ Repository Layer → Technical validation (defensive)
-✅ Database → Constraints (last resort)
+⚠️  Entity Setters → Avoid business logic here (conflicts with frameworks)
+    - Bean Validation annotations (@NotNull, @Size, etc.) → ✅ Acceptable
+    - Complex business logic in setters → ❌ Problematic
+    - Simple null/type checks in setters → ✅ Acceptable (defensive)
+✅ Service Layer → Business logic validation (primary location)
+✅ Repository Layer → Technical validation (defensive programming)
+✅ Database → Constraints (last line of defense)
 ```
+
+**Why Avoid Complex Validation in Entity Setters:**
+- JPA/Hibernate needs to call setters during entity loading from database
+- JSON deserializers (Jackson) call setters when parsing requests
+- Validation in setters can trigger during framework operations, not just business logic
+- Complex business rules may not apply during entity hydration
+- Makes entities tightly coupled to validation logic
+
+**What IS Acceptable in Entity Setters:**
+- Bean Validation annotations (@NotNull, @Min, @Max, @Email, etc.)
+- Simple null checks for required fields
+- Type constraints
+- These don't interfere with framework operations
 
 **What to Validate:**
 - Null checks (Objects.requireNonNull)

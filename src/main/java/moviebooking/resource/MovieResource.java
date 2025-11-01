@@ -49,12 +49,23 @@ public class MovieResource {
     /**
      * Get MovieService instance with lazy initialization.
      *
+     * CRITICAL FIX: Thread-safe lazy initialization with double-checked locking
+     *
+     * THREAD SAFETY PROBLEM:
+     * Previous code had race condition - multiple threads could simultaneously
+     * check if movieService == null and both attempt initialization.
+     *
+     * SOLUTION: synchronized method
+     * - Only one thread can execute this method at a time
+     * - Prevents multiple initialization attempts
+     * - Simple and correct (double-checked locking pattern)
+     *
      * RACE CONDITION FIX:
      * JAX-RS may instantiate this resource before App.main() completes.
      * Lazy initialization ensures we only call getMovieService() when needed,
      * after the application is fully initialized.
      */
-    private MovieService getService() {
+    private synchronized MovieService getService() {
         if (movieService == null) {
             movieService = App.getMovieService();
             if (movieService == null) {

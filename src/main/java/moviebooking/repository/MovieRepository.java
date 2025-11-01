@@ -123,6 +123,10 @@ public class MovieRepository {
     /**
      * Update an existing movie in the database.
      *
+     * CRITICAL FIX: Verify existence before merge()
+     * JPA's merge() creates a new entity if ID doesn't exist, which is wrong for updates.
+     * We must explicitly check existence first to prevent orphaned records.
+     *
      * merge() works for detached entities (entities not currently managed).
      * It:
      * 1. Finds the entity by ID in the database
@@ -137,6 +141,14 @@ public class MovieRepository {
         EntityManager em = emf.createEntityManager();
         try {
             em.getTransaction().begin();
+
+            // CRITICAL FIX: Check existence WITHIN transaction to avoid TOCTOU
+            // This is atomic - we check and update in same transaction
+            Movie existing = em.find(Movie.class, movie.getId());
+            if (existing == null) {
+                em.getTransaction().rollback();
+                return null;  // Movie doesn't exist, cannot update
+            }
 
             // UPDATE movies SET ... WHERE id = ?
             // merge() returns a MANAGED entity

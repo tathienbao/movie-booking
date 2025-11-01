@@ -2,7 +2,23 @@
 
 ## Overview
 
-This document chronicles the evolution of the Movie Booking API backend from initial implementation to production-ready code. Each improvement addresses real-world issues identified through code review, demonstrating professional software engineering practices.
+**📚 IMPORTANT: This is Historical Documentation**
+
+This document chronicles the **evolution** of the Movie Booking API backend from initial implementation to production-ready code. It shows the **iterative improvement process** through multiple code reviews and refinements.
+
+**How to Read This Document:**
+- **"Problem" sections** show the initial/intermediate implementations (not current code)
+- **"Solution" sections** show the improvements made in each iteration
+- **Final code** represents the cumulative result of all fixes (see `src/main/java/moviebooking/`)
+- Each fix builds upon previous ones, demonstrating incremental improvement
+
+**Purpose:**
+- Educational: Shows real-world code review process
+- Demonstrates how code evolves through feedback
+- Explains the "why" behind each architectural decision
+- Each improvement addresses real-world issues identified through code review
+
+**Current State:** The codebase now incorporates ALL fixes described in this document. This is a historical record of HOW we got there, not a description of current problems.
 
 ---
 
@@ -142,7 +158,7 @@ public class MovieResource {
 - If MovieResource instantiates first → NPE
 - Non-deterministic failure (works sometimes, fails others)
 
-**Solution:**
+**Solution (Initial - Not Final):**
 ```java
 public class MovieResource {
     // Don't initialize during field declaration
@@ -169,6 +185,15 @@ public class MovieResource {
     }
 }
 ```
+
+**⚠️ IMPORTANT: This solution is NOT thread-safe!**
+
+This initial fix solves the race condition during application startup, but introduces a new problem:
+- Multiple threads could execute `if (movieService == null)` simultaneously
+- Both threads might initialize movieService (double initialization)
+- No happens-before guarantee (visibility issue)
+
+**Evolution:** This was refined in **Fix 6** (synchronized method) and **Fix 7** (double-checked locking with volatile) for proper thread safety and performance. See those sections for the production-ready solution.
 
 **Educational Value:**
 - Initialization order matters in concurrent systems

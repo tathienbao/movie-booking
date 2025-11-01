@@ -72,13 +72,13 @@ Replace in-memory storage (ConcurrentHashMap) with H2 database persistence using
 ## Implementation Steps
 
 1. ✅ Switch to `feature/database-persistence` branch
-2. ⏳ Create `persistence.xml`
-3. ⏳ Create `MovieRepository` class
-4. ⏳ Update `MovieService` to use repository
-5. ⏳ Test CRUD operations
-6. ⏳ Add database initialization
-7. ⏳ Update documentation
-8. ⏳ Test with automation script
+2. ✅ Create `persistence.xml`
+3. ✅ Create `MovieRepository` class
+4. ✅ Update `MovieService` to use repository
+5. ✅ Test CRUD operations
+6. ✅ Add database initialization
+7. ✅ Update documentation
+8. ✅ Test with automation script
 9. ⏳ Commit and push
 
 ---

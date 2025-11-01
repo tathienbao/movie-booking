@@ -3,6 +3,7 @@ package moviebooking.resource;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import moviebooking.App;
 import moviebooking.model.Movie;
 import moviebooking.service.MovieService;
 
@@ -11,13 +12,31 @@ import java.util.List;
 /**
  * REST API endpoints for Movie operations.
  * Uses JAX-RS annotations to define HTTP methods and paths.
+ *
+ * DEPENDENCY INJECTION:
+ * We get MovieService from App.getMovieService() instead of creating a new instance.
+ * This ensures we use the same MovieService (with database connection) across all requests.
+ *
+ * WHY NOT: new MovieService()?
+ * - Each request would create a new MovieService
+ * - MovieService needs MovieRepository which needs EntityManagerFactory
+ * - We want to reuse the same EntityManagerFactory (expensive to create)
+ *
+ * In enterprise apps, you'd use:
+ * - CDI: @Inject MovieService movieService
+ * - Spring: @Autowired MovieService movieService
+ * - Jersey HK2: @Inject with custom binder
  */
 @Path("/api/movies")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class MovieResource {
 
-    private final MovieService movieService = new MovieService();
+    /**
+     * Get MovieService from App (shared instance with database connection).
+     * Initialized on first request and reused for all subsequent requests.
+     */
+    private final MovieService movieService = App.getMovieService();
 
     /**
      * GET /movies - List all movies

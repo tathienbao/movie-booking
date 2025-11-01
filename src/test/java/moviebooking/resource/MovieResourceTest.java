@@ -5,7 +5,8 @@ import jakarta.ws.rs.core.Application;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import moviebooking.model.Movie;
-import moviebooking.App;
+import moviebooking.TestConfig;
+import moviebooking.util.JsonTestHelper;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.test.JerseyTest;
 import org.junit.jupiter.api.*;
@@ -18,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * Uses Jersey Test Framework to test actual HTTP requests/responses.
  * Tests run against a real (but test) server instance.
  *
- * Note: These tests use the in-memory H2 database, so data is isolated per test suite.
+ * Note: These tests use the H2 database initialized via TestConfig.
  */
 @DisplayName("MovieResource REST API Tests")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
@@ -32,36 +33,14 @@ class MovieResourceTest extends JerseyTest {
 
     @BeforeAll
     static void setupClass() {
-        // Initialize database (EntityManagerFactory, Repository, Service)
-        // This is needed because MovieResource uses App.getMovieService()
-        try {
-            // Call App's static initialization using reflection
-            java.lang.reflect.Method method = App.class.getDeclaredMethod("initializeDatabase");
-            method.setAccessible(true);
-            method.invoke(null);
-            System.out.println("✅ Test database initialized successfully");
-        } catch (Exception e) {
-            System.err.println("⚠️ Warning: Could not initialize test database: " + e.getMessage());
-            // Try alternative approach: create everything manually
-            try {
-                jakarta.persistence.EntityManagerFactory emf =
-                    jakarta.persistence.Persistence.createEntityManagerFactory("MovieBookingPU");
-                moviebooking.repository.MovieRepository repo =
-                    new moviebooking.repository.MovieRepository(emf);
-                moviebooking.service.MovieService service =
-                    new moviebooking.service.MovieService(repo);
+        // Initialize test database using TestConfig helper
+        TestConfig.initializeTestDatabase();
+    }
 
-                // Set the static field in App using reflection
-                java.lang.reflect.Field field = App.class.getDeclaredField("movieService");
-                field.setAccessible(true);
-                field.set(null, service);
-
-                System.out.println("✅ Test database initialized (manual fallback)");
-            } catch (Exception ex) {
-                System.err.println("❌ Failed to initialize test database: " + ex.getMessage());
-                ex.printStackTrace();
-            }
-        }
+    @AfterAll
+    static void teardownClass() {
+        // Cleanup test resources
+        TestConfig.cleanup();
     }
 
     // ==================== GET /api/movies Tests ====================
@@ -104,15 +83,11 @@ class MovieResourceTest extends JerseyTest {
         String allMoviesJson = allMoviesResponse.readEntity(String.class);
 
         // Skip test if no movies exist
-        if (allMoviesJson.equals("[]")) {
+        Long movieId = JsonTestHelper.extractFirstMovieId(allMoviesJson);
+        if (movieId == null) {
             System.out.println("Skipping test - no movies in database");
             return;
         }
-
-        // Extract first movie ID (simple parsing)
-        int idStart = allMoviesJson.indexOf("\"id\":") + 5;
-        int idEnd = allMoviesJson.indexOf(",", idStart);
-        String movieId = allMoviesJson.substring(idStart, idEnd).trim();
 
         // When
         Response response = target("/api/movies/" + movieId)
@@ -123,7 +98,8 @@ class MovieResourceTest extends JerseyTest {
         assertEquals(200, response.getStatus());
 
         String json = response.readEntity(String.class);
-        assertTrue(json.contains("\"id\":" + movieId));
+        Long returnedId = JsonTestHelper.extractMovieId(json);
+        assertEquals(movieId, returnedId);
     }
 
     @Test
@@ -174,7 +150,7 @@ class MovieResourceTest extends JerseyTest {
 
     @Test
     @Order(6)
-    @DisplayName("POST /api/movies with invalid data should return 400 or 500")
+    @DisplayName("POST /api/movies with invalid data should return error")
     void testCreateMovie_InvalidData_ReturnsError() {
         // Given - missing required fields
         String invalidJson = """
@@ -190,13 +166,15 @@ class MovieResourceTest extends JerseyTest {
             .post(Entity.json(invalidJson));
 
         // Then
-        // Could be 400 (Bad Request) or 500 (validation exception)
-        assertTrue(response.getStatus() >= 400);
+        // Should be 400 (Bad Request) or 500 (Internal Server Error from validation)
+        int status = response.getStatus();
+        assertTrue(status == 400 || status == 500,
+            "Expected 400 or 500, got " + status);
     }
 
     @Test
     @Order(7)
-    @DisplayName("POST /api/movies with title too long should return error")
+    @DisplayName("POST /api/movies with title too long should return 400 or 500")
     void testCreateMovie_TitleTooLong_ReturnsError() {
         // Given - title exceeds 255 characters
         String longTitle = "A".repeat(300);
@@ -215,8 +193,10 @@ class MovieResourceTest extends JerseyTest {
             .request(MediaType.APPLICATION_JSON)
             .post(Entity.json(movieJson));
 
-        // Then
-        assertTrue(response.getStatus() >= 400);
+        // Then - validation should fail
+        int status = response.getStatus();
+        assertTrue(status == 400 || status == 500,
+            "Expected 400 or 500 for title too long, got " + status);
     }
 
     @Test
@@ -254,15 +234,11 @@ class MovieResourceTest extends JerseyTest {
         String allMoviesJson = allMoviesResponse.readEntity(String.class);
 
         // Skip test if no movies exist
-        if (allMoviesJson.equals("[]")) {
+        Long movieId = JsonTestHelper.extractFirstMovieId(allMoviesJson);
+        if (movieId == null) {
             System.out.println("Skipping test - no movies in database");
             return;
         }
-
-        // Extract first movie ID
-        int idStart = allMoviesJson.indexOf("\"id\":") + 5;
-        int idEnd = allMoviesJson.indexOf(",", idStart);
-        String movieId = allMoviesJson.substring(idStart, idEnd).trim();
 
         // Given
         String movieJson = """
@@ -284,7 +260,8 @@ class MovieResourceTest extends JerseyTest {
         assertEquals(200, response.getStatus());
 
         String responseJson = response.readEntity(String.class);
-        assertTrue(responseJson.contains("Updated Movie"));
+        String title = JsonTestHelper.getStringField(responseJson, "title");
+        assertEquals("Updated Movie", title);
     }
 
     @Test
@@ -331,9 +308,8 @@ class MovieResourceTest extends JerseyTest {
             .post(Entity.json(movieJson));
 
         String createdJson = createResponse.readEntity(String.class);
-        int idStart = createdJson.indexOf("\"id\":") + 5;
-        int idEnd = createdJson.indexOf(",", idStart);
-        String movieId = createdJson.substring(idStart, idEnd).trim();
+        Long movieId = JsonTestHelper.extractMovieId(createdJson);
+        assertNotNull(movieId, "Created movie should have an ID");
 
         // When - delete the movie we just created
         Response response = target("/api/movies/" + movieId)

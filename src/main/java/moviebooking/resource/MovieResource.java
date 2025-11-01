@@ -39,40 +39,68 @@ public class MovieResource {
     /**
      * Lazy-initialized MovieService to prevent race condition.
      *
+     * CRITICAL FIX: volatile for double-checked locking
+     *
+     * volatile ensures:
+     * - Visibility: All threads see the same value
+     * - Prevents instruction reordering that could break double-checked locking
+     *
+     * Without volatile, thread B might see partially constructed MovieService
+     * from thread A due to CPU cache and instruction reordering.
+     *
      * THREAD SAFETY:
      * - Field initialized to null
      * - getMovieService() called lazily on first use
      * - Prevents NPE if request arrives before App finishes initialization
      */
-    private MovieService movieService;
+    private volatile MovieService movieService;
 
     /**
      * Get MovieService instance with lazy initialization.
      *
-     * CRITICAL FIX: Thread-safe lazy initialization with double-checked locking
+     * CRITICAL FIX: Double-checked locking for performance
      *
-     * THREAD SAFETY PROBLEM:
-     * Previous code had race condition - multiple threads could simultaneously
-     * check if movieService == null and both attempt initialization.
+     * PERFORMANCE PROBLEM WITH synchronized METHOD:
+     * Synchronizing entire method creates global lock - all HTTP requests
+     * execute sequentially even after initialization. This defeats multi-threading!
      *
-     * SOLUTION: synchronized method
-     * - Only one thread can execute this method at a time
-     * - Prevents multiple initialization attempts
-     * - Simple and correct (double-checked locking pattern)
+     * SOLUTION: Double-checked locking pattern
+     * 1. First check (no lock) - fast path for already-initialized case
+     * 2. Synchronized block - only for initialization
+     * 3. Second check (with lock) - prevent double initialization
+     * 4. volatile field - ensures visibility across threads
+     *
+     * PERFORMANCE:
+     * - After first initialization: NO synchronization overhead
+     * - Requests execute concurrently (as they should)
+     * - Only first few requests might synchronize
+     *
+     * CORRECTNESS (Thread-safe):
+     * - volatile prevents instruction reordering
+     * - Double check prevents race condition
+     * - synchronized block prevents concurrent initialization
+     * - Once initialized, zero overhead
      *
      * RACE CONDITION FIX:
      * JAX-RS may instantiate this resource before App.main() completes.
      * Lazy initialization ensures we only call getMovieService() when needed,
      * after the application is fully initialized.
      */
-    private synchronized MovieService getService() {
+    private MovieService getService() {
+        // First check (no locking) - fast path for 99.9% of requests
         if (movieService == null) {
-            movieService = App.getMovieService();
-            if (movieService == null) {
-                throw new IllegalStateException(
-                    "Application not fully initialized. MovieService is null. " +
-                    "This should not happen if App.main() completed successfully."
-                );
+            // Synchronize only for initialization (rare)
+            synchronized (this) {
+                // Second check (with lock) - prevent double initialization
+                if (movieService == null) {
+                    movieService = App.getMovieService();
+                    if (movieService == null) {
+                        throw new IllegalStateException(
+                            "Application not fully initialized. MovieService is null. " +
+                            "This should not happen if App.main() completed successfully."
+                        );
+                    }
+                }
             }
         }
         return movieService;

@@ -128,11 +128,8 @@ public class MovieService {
      * Returns null if movie doesn't exist.
      *
      * CRITICAL FIX: TOCTOU (Time-Of-Check to Time-Of-Use) race condition
-     * Previous code checked existence separately from update, creating a gap
-     * where another thread could delete the movie between check and update.
-     *
-     * Solution: Let repository.update() handle the atomic operation.
-     * If merge() succeeds, the movie exists. No separate check needed.
+     * Repository now checks existence WITHIN transaction (atomic operation).
+     * The check and update happen in same transaction, preventing race condition.
      *
      * CRITICAL FIX: Input validation
      * Added same validation as createMovie() to prevent invalid updates.
@@ -146,12 +143,9 @@ public class MovieService {
         // VALIDATION: Null check
         Objects.requireNonNull(movie, "Movie cannot be null");
 
-        // RACE CONDITION FIX:
-        // Don't check existence separately - let update() be atomic
-        // If the movie doesn't exist, merge() will create it (which is wrong)
-        // So we check if ID is set and > 0 to ensure it's an update, not create
+        // VALIDATION: ID must be provided for update
         if (movie.getId() == null || movie.getId() <= 0) {
-            return null;  // Invalid ID for update
+            throw new IllegalArgumentException("Movie ID must be positive for update (got: " + movie.getId() + ")");
         }
 
         // VALIDATION: Required fields (same as create)

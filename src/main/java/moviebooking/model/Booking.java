@@ -110,7 +110,12 @@ public class Booking {
         return movie;
     }
 
+    /**
+     * CRITICAL FIX: Setter validation
+     * Prevents bypassing constructor validation by calling setter directly.
+     */
     public void setMovie(Movie movie) {
+        Objects.requireNonNull(movie, "Movie cannot be null");
         this.movie = movie;
     }
 
@@ -118,7 +123,15 @@ public class Booking {
         return numberOfSeats;
     }
 
+    /**
+     * CRITICAL FIX: Setter validation
+     * Prevents setting invalid values after construction.
+     */
     public void setNumberOfSeats(Integer numberOfSeats) {
+        Objects.requireNonNull(numberOfSeats, "Number of seats cannot be null");
+        if (numberOfSeats <= 0) {
+            throw new IllegalArgumentException("Number of seats must be positive (got: " + numberOfSeats + ")");
+        }
         this.numberOfSeats = numberOfSeats;
     }
 

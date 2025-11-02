@@ -1,6 +1,8 @@
 package moviebooking.resource;
 
 import jakarta.ws.rs.*;
+import jakarta.ws.rs.container.ContainerRequestContext;
+import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import moviebooking.App;
@@ -152,20 +154,26 @@ public class BookingResource {
      * Request body should contain:
      * {
      *   "movieId": 1,
-     *   "customerName": "John Doe",
-     *   "customerEmail": "john@example.com",
      *   "numberOfSeats": 2
      * }
      *
+     * User information is extracted from the JWT token (set by JwtAuthenticationFilter).
      * Returns 201 Created with the created booking.
      */
     @POST
-    public Response createBooking(BookingRequest request) {
+    public Response createBooking(@Context ContainerRequestContext requestContext, BookingRequest request) {
         try {
+            // Extract userId from request context (set by JwtAuthenticationFilter)
+            Long userId = (Long) requestContext.getProperty("userId");
+            if (userId == null) {
+                return Response.status(Response.Status.UNAUTHORIZED)
+                        .entity("{\"error\": \"Authentication required\"}")
+                        .build();
+            }
+
             Booking created = getService().createBooking(
+                    userId,
                     request.getMovieId(),
-                    request.getCustomerName(),
-                    request.getCustomerEmail(),
                     request.getNumberOfSeats()
             );
             return Response.status(Response.Status.CREATED)
@@ -212,15 +220,24 @@ public class BookingResource {
      */
     public static class BookingRequest {
         private Long movieId;
+        private Integer numberOfSeats;
+
+        // For backward compatibility with tests
         private String customerName;
         private String customerEmail;
-        private Integer numberOfSeats;
 
         // Default constructor (required by JAX-RS for JSON deserialization)
         public BookingRequest() {
         }
 
-        // Constructor for testing
+        // Constructor for authenticated bookings
+        public BookingRequest(Long movieId, Integer numberOfSeats) {
+            this.movieId = movieId;
+            this.numberOfSeats = numberOfSeats;
+        }
+
+        // Legacy constructor for backward compatibility with tests
+        @Deprecated
         public BookingRequest(Long movieId, String customerName, String customerEmail, Integer numberOfSeats) {
             this.movieId = movieId;
             this.customerName = customerName;

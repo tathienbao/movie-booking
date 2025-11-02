@@ -4,6 +4,7 @@ import moviebooking.model.Booking;
 import moviebooking.model.Movie;
 import moviebooking.repository.BookingRepository;
 import moviebooking.repository.MovieRepository;
+import moviebooking.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
@@ -38,13 +39,16 @@ class BookingServiceTest {
     @Mock
     private MovieRepository mockMovieRepository;
 
+    @Mock
+    private UserRepository mockUserRepository;
+
     private BookingService bookingService;
 
     private Movie testMovie;
 
     @BeforeEach
     void setUp() {
-        bookingService = new BookingService(mockBookingRepository, mockMovieRepository);
+        bookingService = new BookingService(mockBookingRepository, mockMovieRepository, mockUserRepository);
 
         // Create a test movie that can be reused across tests
         testMovie = new Movie("Inception", "Dream heist", "Sci-Fi", 148, 12.50);
@@ -59,7 +63,7 @@ class BookingServiceTest {
         // When & Then
         NullPointerException exception = assertThrows(
                 NullPointerException.class,
-                () -> new BookingService(null, mockMovieRepository)
+                () -> new BookingService(null, mockMovieRepository, mockUserRepository)
         );
 
         assertTrue(exception.getMessage().contains("BookingRepository cannot be null"));
@@ -71,10 +75,22 @@ class BookingServiceTest {
         // When & Then
         NullPointerException exception = assertThrows(
                 NullPointerException.class,
-                () -> new BookingService(mockBookingRepository, null)
+                () -> new BookingService(mockBookingRepository, null, mockUserRepository)
         );
 
         assertTrue(exception.getMessage().contains("MovieRepository cannot be null"));
+    }
+
+    @Test
+    @DisplayName("Constructor should throw exception when user repository is null")
+    void testConstructor_NullUserRepository_ThrowsException() {
+        // When & Then
+        NullPointerException exception = assertThrows(
+                NullPointerException.class,
+                () -> new BookingService(mockBookingRepository, mockMovieRepository, null)
+        );
+
+        assertTrue(exception.getMessage().contains("UserRepository cannot be null"));
     }
 
     // ==================== getAllBookings Tests ====================

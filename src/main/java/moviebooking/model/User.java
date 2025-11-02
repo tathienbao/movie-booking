@@ -13,9 +13,12 @@ import java.util.Objects;
  * - Password is stored as BCrypt hash (never plain text)
  * - @JsonIgnore on passwordHash prevents it from being serialized to JSON
  * - Email is unique (enforced by database constraint)
+ * - Database index on email for fast authentication lookups
  */
 @Entity
-@Table(name = "users")
+@Table(name = "users", indexes = {
+    @Index(name = "idx_user_email", columnList = "email", unique = true)
+})
 public class User {
 
     @Id

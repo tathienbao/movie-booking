@@ -11,9 +11,12 @@ A Jakarta EE 10 REST API demo project built with JAX-RS, Jersey, and Grizzly HTT
 - **Grizzly HTTP Server** - Embedded web server
 - **Maven** - Build tool
 - **Docker** - Containerization
-- **H2 Database** - In-memory database (ready for JPA integration)
+- **H2 Database** - Persistent file-based database with JPA/Hibernate
+- **JUnit 5 & Mockito** - Comprehensive testing (149 tests)
 
 ## 📋 API Endpoints
+
+### Movie API
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -22,6 +25,16 @@ A Jakarta EE 10 REST API demo project built with JAX-RS, Jersey, and Grizzly HTT
 | POST | `/api/movies` | Create new movie |
 | PUT | `/api/movies/{id}` | Update existing movie |
 | DELETE | `/api/movies/{id}` | Delete movie |
+
+### Booking API
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/bookings` | List all bookings |
+| GET | `/api/bookings/{id}` | Get booking by ID |
+| GET | `/api/bookings/movies/{movieId}` | Get all bookings for a specific movie |
+| POST | `/api/bookings` | Create new booking |
+| DELETE | `/api/bookings/{id}` | Cancel booking |
 
 ## 🛠️ Prerequisites
 
@@ -75,6 +88,8 @@ docker run -p 8080:8080 movie-booking-api
 
 ## 🧪 Testing the API
 
+### Movie API Examples
+
 ```bash
 # Get all movies
 curl http://localhost:8080/api/movies
@@ -96,18 +111,43 @@ curl -X PUT http://localhost:8080/api/movies/1 \
 curl -X DELETE http://localhost:8080/api/movies/1
 ```
 
+### Booking API Examples
+
+```bash
+# Get all bookings
+curl http://localhost:8080/api/bookings
+
+# Get specific booking
+curl http://localhost:8080/api/bookings/1
+
+# Get bookings for a movie
+curl http://localhost:8080/api/bookings/movies/1
+
+# Create new booking
+curl -X POST http://localhost:8080/api/bookings \
+  -H "Content-Type: application/json" \
+  -d '{"movieId":1,"customerName":"John Doe","customerEmail":"john@example.com","numberOfSeats":2}'
+
+# Cancel booking
+curl -X DELETE http://localhost:8080/api/bookings/1
+```
+
 ## 🏗️ Project Structure
 
 ```
 src/
 ├── main/
 │   └── java/moviebooking/
-│       ├── model/           # JPA entities
+│       ├── model/           # JPA entities (Movie, Booking)
+│       ├── repository/      # Data access layer
 │       ├── resource/        # JAX-RS REST endpoints
-│       ├── service/         # Business logic
+│       ├── service/         # Business logic & validation
 │       └── App.java         # Main application
 └── test/
-    └── java/moviebooking/   # Unit tests
+    └── java/moviebooking/
+        ├── resource/        # REST integration tests
+        ├── service/         # Unit & edge case tests
+        └── util/            # Test helpers
 ```
 
 ## 📚 Learning Resources
@@ -158,12 +198,16 @@ curl http://localhost:8080/api/movies
 
 ## 🎯 Features
 
-- ✅ RESTful API design
+- ✅ RESTful API design (Movie & Booking endpoints)
 - ✅ JSON request/response handling
-- ✅ In-memory data storage
-- ✅ CRUD operations
-- ✅ Docker support
-- ✅ CI/CD ready
+- ✅ Database persistence with JPA/Hibernate (H2)
+- ✅ Full CRUD operations
+- ✅ Comprehensive validation & error handling
+- ✅ Entity relationships (@ManyToOne)
+- ✅ Automated testing (149 tests: unit, integration, edge cases)
+- ✅ Docker support with multi-stage builds
+- ✅ Kubernetes deployment ready
+- ✅ CI/CD ready (GitHub Actions + Jenkins)
 - ✅ Standalone executable JAR
 
 ## 📝 License

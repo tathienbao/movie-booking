@@ -2,7 +2,9 @@ package moviebooking;
 
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.Persistence;
+import moviebooking.repository.BookingRepository;
 import moviebooking.repository.MovieRepository;
+import moviebooking.service.BookingService;
 import moviebooking.service.MovieService;
 
 /**
@@ -15,6 +17,7 @@ public class TestConfig {
 
     private static EntityManagerFactory entityManagerFactory;
     private static MovieService movieService;
+    private static BookingService bookingService;
     private static boolean initialized = false;
 
     /**
@@ -30,14 +33,22 @@ public class TestConfig {
             // Create EntityManagerFactory for tests
             entityManagerFactory = Persistence.createEntityManagerFactory("MovieBookingPU");
 
-            // Create repository and service
-            MovieRepository repository = new MovieRepository(entityManagerFactory);
-            movieService = new MovieService(repository);
+            // Create repositories
+            MovieRepository movieRepository = new MovieRepository(entityManagerFactory);
+            BookingRepository bookingRepository = new BookingRepository(entityManagerFactory);
 
-            // Set the static field in App using reflection (only way to inject for tests)
-            java.lang.reflect.Field field = App.class.getDeclaredField("movieService");
-            field.setAccessible(true);
-            field.set(null, movieService);
+            // Create services
+            movieService = new MovieService(movieRepository);
+            bookingService = new BookingService(bookingRepository, movieRepository);
+
+            // Set the static fields in App using reflection (only way to inject for tests)
+            java.lang.reflect.Field movieServiceField = App.class.getDeclaredField("movieService");
+            movieServiceField.setAccessible(true);
+            movieServiceField.set(null, movieService);
+
+            java.lang.reflect.Field bookingServiceField = App.class.getDeclaredField("bookingService");
+            bookingServiceField.setAccessible(true);
+            bookingServiceField.set(null, bookingService);
 
             initialized = true;
             System.out.println("✅ Test database initialized successfully");
@@ -56,6 +67,7 @@ public class TestConfig {
             entityManagerFactory = null;
         }
         movieService = null;
+        bookingService = null;
         initialized = false;
     }
 
@@ -67,5 +79,15 @@ public class TestConfig {
             initializeTestDatabase();
         }
         return movieService;
+    }
+
+    /**
+     * Get the initialized BookingService for tests.
+     */
+    public static BookingService getBookingService() {
+        if (!initialized) {
+            initializeTestDatabase();
+        }
+        return bookingService;
     }
 }

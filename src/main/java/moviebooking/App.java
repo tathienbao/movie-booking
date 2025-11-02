@@ -2,7 +2,9 @@ package moviebooking;
 
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.Persistence;
+import moviebooking.repository.BookingRepository;
 import moviebooking.repository.MovieRepository;
+import moviebooking.service.BookingService;
 import moviebooking.service.MovieService;
 import org.glassfish.grizzly.http.server.HttpServer;
 import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
@@ -51,11 +53,11 @@ public class App {
     private static final String BASE_URI = "http://0.0.0.0:8080/";
 
     /**
-     * Static MovieService instance shared across all REST resources.
+     * Static service instances shared across all REST resources.
      *
      * WHY STATIC?
      * JAX-RS creates new instances of Resource classes for each request.
-     * We want to share ONE MovieService (and EntityManagerFactory) across all requests.
+     * We want to share ONE service (and EntityManagerFactory) across all requests.
      *
      * Alternative approaches:
      * - Use CDI (@Inject)
@@ -63,6 +65,7 @@ public class App {
      * - Use Jersey's HK2 dependency injection
      */
     private static MovieService movieService;
+    private static BookingService bookingService;
     private static EntityManagerFactory entityManagerFactory;
 
     /**
@@ -73,12 +76,19 @@ public class App {
     }
 
     /**
-     * Initialize database and create MovieService.
+     * Get the BookingService instance (used by REST resources).
+     */
+    public static BookingService getBookingService() {
+        return bookingService;
+    }
+
+    /**
+     * Initialize database and create services.
      *
      * STEP-BY-STEP:
      * 1. Create EntityManagerFactory from "MovieBookingPU" persistence unit
-     * 2. Create MovieRepository with the factory
-     * 3. Create MovieService with the repository
+     * 2. Create MovieRepository and BookingRepository with the factory
+     * 3. Create MovieService and BookingService with the repositories
      * 4. Initialize sample data if database is empty
      */
     private static void initializeDatabase() {
@@ -90,15 +100,23 @@ public class App {
         entityManagerFactory = Persistence.createEntityManagerFactory("MovieBookingPU");
         System.out.println("✅ EntityManagerFactory created");
 
-        // Step 2: Create Repository
+        // Step 2: Create Repositories
         System.out.println("Creating MovieRepository...");
         MovieRepository movieRepository = new MovieRepository(entityManagerFactory);
         System.out.println("✅ MovieRepository created");
 
-        // Step 3: Create Service
+        System.out.println("Creating BookingRepository...");
+        BookingRepository bookingRepository = new BookingRepository(entityManagerFactory);
+        System.out.println("✅ BookingRepository created");
+
+        // Step 3: Create Services
         System.out.println("Creating MovieService...");
         movieService = new MovieService(movieRepository);
         System.out.println("✅ MovieService created");
+
+        System.out.println("Creating BookingService...");
+        bookingService = new BookingService(bookingRepository, movieRepository);
+        System.out.println("✅ BookingService created");
 
         // Step 4: Initialize sample data
         System.out.println("Initializing sample data...");
@@ -136,7 +154,9 @@ public class App {
         final HttpServer server = startServer();
         System.out.println("=== Movie Booking API Started ===");
         System.out.println("Server binding: " + BASE_URI + " (all interfaces)");
-        System.out.println("Access via: http://localhost:8080/api/movies");
+        System.out.println("API Endpoints:");
+        System.out.println("  Movies:   http://localhost:8080/api/movies");
+        System.out.println("  Bookings: http://localhost:8080/api/bookings");
         System.out.println("Database file: ./data/moviebooking.mv.db");
         System.out.println("Press CTRL+C to stop the server...\n");
 

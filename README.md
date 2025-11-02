@@ -12,29 +12,38 @@ A Jakarta EE 10 REST API demo project built with JAX-RS, Jersey, and Grizzly HTT
 - **Maven** - Build tool
 - **Docker** - Containerization
 - **H2 Database** - Persistent file-based database with JPA/Hibernate
-- **JUnit 5 & Mockito** - Comprehensive testing (149 tests)
+- **JWT Authentication** - Secure token-based authentication
+- **BCrypt** - Password hashing for security
+- **JUnit 5 & Mockito** - Comprehensive testing (172 tests)
 
 ## 📋 API Endpoints
 
+### Authentication API (Public)
+
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| POST | `/api/auth/register` | Register new user | No |
+| POST | `/api/auth/login` | Login and get JWT token | No |
+
 ### Movie API
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/movies` | List all movies |
-| GET | `/api/movies/{id}` | Get movie by ID |
-| POST | `/api/movies` | Create new movie |
-| PUT | `/api/movies/{id}` | Update existing movie |
-| DELETE | `/api/movies/{id}` | Delete movie |
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| GET | `/api/movies` | List all movies | No (Public) |
+| GET | `/api/movies/{id}` | Get movie by ID | No (Public) |
+| POST | `/api/movies` | Create new movie | **Yes (ADMIN only)** |
+| PUT | `/api/movies/{id}` | Update existing movie | **Yes (ADMIN only)** |
+| DELETE | `/api/movies/{id}` | Delete movie | **Yes (ADMIN only)** |
 
 ### Booking API
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/bookings` | List all bookings |
-| GET | `/api/bookings/{id}` | Get booking by ID |
-| GET | `/api/bookings/movies/{movieId}` | Get all bookings for a specific movie |
-| POST | `/api/bookings` | Create new booking |
-| DELETE | `/api/bookings/{id}` | Cancel booking |
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| GET | `/api/bookings` | List all bookings | **Yes** |
+| GET | `/api/bookings/{id}` | Get booking by ID | **Yes** |
+| GET | `/api/bookings/movies/{movieId}` | Get bookings for movie | **Yes** |
+| POST | `/api/bookings` | Create new booking | **Yes** |
+| DELETE | `/api/bookings/{id}` | Cancel booking | **Yes** |
 
 ## 🛠️ Prerequisites
 
@@ -88,48 +97,70 @@ docker run -p 8080:8080 movie-booking-api
 
 ## 🧪 Testing the API
 
+### Authentication Examples
+
+```bash
+# Register new user
+curl -X POST http://localhost:8080/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","name":"John Doe","password":"password123"}'
+
+# Login and get JWT token
+curl -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"password123"}'
+# Returns: {"token":"eyJhbG...","email":"user@example.com","name":"John Doe","role":"CUSTOMER"}
+
+# Save token for subsequent requests
+TOKEN="eyJhbGciOiJIUzM4NCJ9..."  # Use token from login response
+```
+
+**Default Admin Account:**
+- Email: `admin@example.com`
+- Password: `admin123`
+
 ### Movie API Examples
 
 ```bash
-# Get all movies
+# Get all movies (public - no auth required)
 curl http://localhost:8080/api/movies
 
-# Get specific movie
+# Get specific movie (public)
 curl http://localhost:8080/api/movies/1
 
-# Create new movie
+# Create new movie (ADMIN only)
 curl -X POST http://localhost:8080/api/movies \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
   -d '{"title":"Avatar","description":"Aliens on Pandora","genre":"Sci-Fi","durationMinutes":162,"price":14.0}'
 
-# Update movie
+# Update movie (ADMIN only)
 curl -X PUT http://localhost:8080/api/movies/1 \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
   -d '{"title":"Inception Updated","description":"New description","genre":"Sci-Fi","durationMinutes":148,"price":15.0}'
 
-# Delete movie
-curl -X DELETE http://localhost:8080/api/movies/1
+# Delete movie (ADMIN only)
+curl -X DELETE http://localhost:8080/api/movies/1 \
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 ### Booking API Examples
 
 ```bash
-# Get all bookings
-curl http://localhost:8080/api/bookings
+# Get all bookings (requires authentication)
+curl http://localhost:8080/api/bookings \
+  -H "Authorization: Bearer $TOKEN"
 
-# Get specific booking
-curl http://localhost:8080/api/bookings/1
-
-# Get bookings for a movie
-curl http://localhost:8080/api/bookings/movies/1
-
-# Create new booking
+# Create new booking (user info from JWT token)
 curl -X POST http://localhost:8080/api/bookings \
   -H "Content-Type: application/json" \
-  -d '{"movieId":1,"customerName":"John Doe","customerEmail":"john@example.com","numberOfSeats":2}'
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"movieId":1,"numberOfSeats":2}'
 
 # Cancel booking
-curl -X DELETE http://localhost:8080/api/bookings/1
+curl -X DELETE http://localhost:8080/api/bookings/1 \
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 ## 🏗️ Project Structure
@@ -198,17 +229,30 @@ curl http://localhost:8080/api/movies
 
 ## 🎯 Features
 
-- ✅ RESTful API design (Movie & Booking endpoints)
+- ✅ RESTful API design (Authentication, Movie & Booking endpoints)
+- ✅ **JWT Authentication** with secure token-based auth
+- ✅ **Role-Based Access Control (RBAC)** - CUSTOMER and ADMIN roles
+- ✅ **Password Security** with BCrypt hashing (cost factor 12)
 - ✅ JSON request/response handling
 - ✅ Database persistence with JPA/Hibernate (H2)
-- ✅ Full CRUD operations
+- ✅ Full CRUD operations with authorization
 - ✅ Comprehensive validation & error handling
 - ✅ Entity relationships (@ManyToOne)
-- ✅ Automated testing (149 tests: unit, integration, edge cases)
+- ✅ Automated testing (172 tests: unit, integration, auth, RBAC, edge cases)
 - ✅ Docker support with multi-stage builds
 - ✅ Kubernetes deployment ready
 - ✅ CI/CD ready (GitHub Actions + Jenkins)
 - ✅ Standalone executable JAR
+
+### Security Features
+
+- JWT tokens with HS384 algorithm (24-hour expiration)
+- Password validation (min 8 chars, must contain letter + number)
+- Email validation and normalization
+- Case-insensitive email login
+- Protected endpoints with Bearer token authentication
+- Admin-only operations (Movie CRUD)
+- User context from JWT claims
 
 ## 📝 License
 

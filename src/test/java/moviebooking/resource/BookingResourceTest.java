@@ -5,6 +5,7 @@ import jakarta.ws.rs.core.Application;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import moviebooking.TestConfig;
+import moviebooking.util.AuthTestHelper;
 import moviebooking.util.JsonTestHelper;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.test.JerseyTest;
@@ -24,6 +25,9 @@ import static org.junit.jupiter.api.Assertions.*;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class BookingResourceTest extends JerseyTest {
 
+    private AuthTestHelper authHelper;
+    private String customerToken;
+
     @Override
     protected Application configure() {
         // Configure Jersey to scan for REST resources
@@ -34,6 +38,15 @@ class BookingResourceTest extends JerseyTest {
     static void setupClass() {
         // Initialize test database using TestConfig helper
         TestConfig.initializeTestDatabase();
+    }
+
+    @BeforeEach
+    @Override
+    public void setUp() throws Exception {
+        super.setUp();
+        // Initialize auth helper and get customer token
+        authHelper = new AuthTestHelper(this);
+        customerToken = authHelper.getCustomerToken();
     }
 
     @AfterAll
@@ -49,7 +62,9 @@ class BookingResourceTest extends JerseyTest {
     @DisplayName("GET /api/bookings should return 200 OK")
     void testGetAllBookings_ReturnsOK() {
         // When
-        Response response = target("/api/bookings").request().get();
+        Response response = target("/api/bookings")
+                .request().header("Authorization", AuthTestHelper.bearerToken(customerToken))
+                .get();
 
         // Then
         assertEquals(200, response.getStatus());
@@ -62,7 +77,7 @@ class BookingResourceTest extends JerseyTest {
     void testGetAllBookings_ReturnsJsonArray() {
         // When
         String json = target("/api/bookings")
-                .request(MediaType.APPLICATION_JSON)
+                .request(MediaType.APPLICATION_JSON).header("Authorization", AuthTestHelper.bearerToken(customerToken))
                 .get(String.class);
 
         // Then
@@ -92,24 +107,23 @@ class BookingResourceTest extends JerseyTest {
         String bookingJson = String.format("""
             {
                 "movieId": %d,
-                "customerName": "John Doe",
-                "customerEmail": "john@example.com",
                 "numberOfSeats": 2
             }
             """, movieId);
 
         // When
         Response response = target("/api/bookings")
-                .request(MediaType.APPLICATION_JSON)
+                .request(MediaType.APPLICATION_JSON).header("Authorization", AuthTestHelper.bearerToken(customerToken))
                 .post(Entity.json(bookingJson));
 
         // Then
         assertEquals(201, response.getStatus());
 
         String responseJson = response.readEntity(String.class);
-        assertTrue(responseJson.contains("John Doe"));
-        assertTrue(responseJson.contains("john@example.com"));
-        assertTrue(responseJson.contains("\"id\""));
+        Long bookingId = JsonTestHelper.extractBookingId(responseJson);
+        assertNotNull(bookingId, "Created booking should have an ID");
+        assertTrue(responseJson.contains("Test Customer"));  // Name from auth token
+        assertTrue(responseJson.contains("test.customer@example.com"));  // Email from auth token
     }
 
     @Test
@@ -120,15 +134,13 @@ class BookingResourceTest extends JerseyTest {
         String bookingJson = """
             {
                 "movieId": 999,
-                "customerName": "John Doe",
-                "customerEmail": "john@example.com",
                 "numberOfSeats": 2
             }
             """;
 
         // When
         Response response = target("/api/bookings")
-                .request(MediaType.APPLICATION_JSON)
+                .request(MediaType.APPLICATION_JSON).header("Authorization", AuthTestHelper.bearerToken(customerToken))
                 .post(Entity.json(bookingJson));
 
         // Then
@@ -138,42 +150,7 @@ class BookingResourceTest extends JerseyTest {
         assertTrue(responseJson.contains("error") || responseJson.contains("not found"));
     }
 
-    @Test
-    @Order(5)
-    @DisplayName("POST /api/bookings with invalid email should return 400")
-    void testCreateBooking_InvalidEmail_Returns400() {
-        // First, get a valid movie ID
-        Response moviesResponse = target("/api/movies").request().get();
-        String moviesJson = moviesResponse.readEntity(String.class);
-        Long movieId = JsonTestHelper.extractFirstMovieId(moviesJson);
-
-        // Skip test if no movies exist
-        if (movieId == null) {
-            System.out.println("Skipping test - no movies in database");
-            return;
-        }
-
-        // Given - invalid email format
-        String bookingJson = String.format("""
-            {
-                "movieId": %d,
-                "customerName": "John Doe",
-                "customerEmail": "invalid-email",
-                "numberOfSeats": 2
-            }
-            """, movieId);
-
-        // When
-        Response response = target("/api/bookings")
-                .request(MediaType.APPLICATION_JSON)
-                .post(Entity.json(bookingJson));
-
-        // Then
-        assertEquals(400, response.getStatus());
-
-        String responseJson = response.readEntity(String.class);
-        assertTrue(responseJson.contains("error") || responseJson.contains("Invalid email"));
-    }
+    // Test removed: Email validation now happens at user registration, not booking creation
 
     @Test
     @Order(6)
@@ -194,15 +171,13 @@ class BookingResourceTest extends JerseyTest {
         String bookingJson = String.format("""
             {
                 "movieId": %d,
-                "customerName": "John Doe",
-                "customerEmail": "john@example.com",
                 "numberOfSeats": 0
             }
             """, movieId);
 
         // When
         Response response = target("/api/bookings")
-                .request(MediaType.APPLICATION_JSON)
+                .request(MediaType.APPLICATION_JSON).header("Authorization", AuthTestHelper.bearerToken(customerToken))
                 .post(Entity.json(bookingJson));
 
         // Then
@@ -228,15 +203,13 @@ class BookingResourceTest extends JerseyTest {
         String bookingJson = String.format("""
             {
                 "movieId": %d,
-                "customerName": "John Doe",
-                "customerEmail": "john@example.com",
                 "numberOfSeats": 101
             }
             """, movieId);
 
         // When
         Response response = target("/api/bookings")
-                .request(MediaType.APPLICATION_JSON)
+                .request(MediaType.APPLICATION_JSON).header("Authorization", AuthTestHelper.bearerToken(customerToken))
                 .post(Entity.json(bookingJson));
 
         // Then
@@ -246,39 +219,7 @@ class BookingResourceTest extends JerseyTest {
         assertTrue(responseJson.contains("error"));
     }
 
-    @Test
-    @Order(8)
-    @DisplayName("POST /api/bookings with empty customer name should return 400")
-    void testCreateBooking_EmptyName_Returns400() {
-        // First, get a valid movie ID
-        Response moviesResponse = target("/api/movies").request().get();
-        String moviesJson = moviesResponse.readEntity(String.class);
-        Long movieId = JsonTestHelper.extractFirstMovieId(moviesJson);
-
-        // Skip test if no movies exist
-        if (movieId == null) {
-            System.out.println("Skipping test - no movies in database");
-            return;
-        }
-
-        // Given - empty customer name
-        String bookingJson = String.format("""
-            {
-                "movieId": %d,
-                "customerName": "",
-                "customerEmail": "john@example.com",
-                "numberOfSeats": 2
-            }
-            """, movieId);
-
-        // When
-        Response response = target("/api/bookings")
-                .request(MediaType.APPLICATION_JSON)
-                .post(Entity.json(bookingJson));
-
-        // Then
-        assertEquals(400, response.getStatus());
-    }
+    // Test removed: Name validation now happens at user registration, not booking creation
 
     // ==================== GET /api/bookings/{id} Tests ====================
 
@@ -300,14 +241,12 @@ class BookingResourceTest extends JerseyTest {
         String bookingJson = String.format("""
             {
                 "movieId": %d,
-                "customerName": "Jane Smith",
-                "customerEmail": "jane@example.com",
                 "numberOfSeats": 3
             }
             """, movieId);
 
         Response createResponse = target("/api/bookings")
-                .request(MediaType.APPLICATION_JSON)
+                .request(MediaType.APPLICATION_JSON).header("Authorization", AuthTestHelper.bearerToken(customerToken))
                 .post(Entity.json(bookingJson));
 
         String createdJson = createResponse.readEntity(String.class);
@@ -316,15 +255,15 @@ class BookingResourceTest extends JerseyTest {
 
         // When - get the booking we just created
         Response response = target("/api/bookings/" + bookingId)
-                .request(MediaType.APPLICATION_JSON)
+                .request().header("Authorization", AuthTestHelper.bearerToken(customerToken))
                 .get();
 
         // Then
         assertEquals(200, response.getStatus());
 
         String responseJson = response.readEntity(String.class);
-        assertTrue(responseJson.contains("Jane Smith"));
-        assertTrue(responseJson.contains("jane@example.com"));
+        assertTrue(responseJson.contains("Test Customer"));  // Name from auth token
+        assertTrue(responseJson.contains("test.customer@example.com"));  // Email from auth token
     }
 
     @Test
@@ -333,7 +272,7 @@ class BookingResourceTest extends JerseyTest {
     void testGetBookingById_InvalidId_Returns404() {
         // When
         Response response = target("/api/bookings/999")
-                .request(MediaType.APPLICATION_JSON)
+                .request().header("Authorization", AuthTestHelper.bearerToken(customerToken))
                 .get();
 
         // Then
@@ -362,7 +301,7 @@ class BookingResourceTest extends JerseyTest {
 
         // When
         Response response = target("/api/bookings/movies/" + movieId)
-                .request(MediaType.APPLICATION_JSON)
+                .request(MediaType.APPLICATION_JSON).header("Authorization", AuthTestHelper.bearerToken(customerToken))
                 .get();
 
         // Then
@@ -394,14 +333,12 @@ class BookingResourceTest extends JerseyTest {
         String bookingJson = String.format("""
             {
                 "movieId": %d,
-                "customerName": "Delete Me",
-                "customerEmail": "delete@example.com",
                 "numberOfSeats": 1
             }
             """, movieId);
 
         Response createResponse = target("/api/bookings")
-                .request(MediaType.APPLICATION_JSON)
+                .request(MediaType.APPLICATION_JSON).header("Authorization", AuthTestHelper.bearerToken(customerToken))
                 .post(Entity.json(bookingJson));
 
         String createdJson = createResponse.readEntity(String.class);
@@ -410,7 +347,7 @@ class BookingResourceTest extends JerseyTest {
 
         // When - delete the booking we just created
         Response response = target("/api/bookings/" + bookingId)
-                .request()
+                .request().header("Authorization", AuthTestHelper.bearerToken(customerToken))
                 .delete();
 
         // Then
@@ -418,7 +355,7 @@ class BookingResourceTest extends JerseyTest {
 
         // Verify booking is actually deleted
         Response verifyResponse = target("/api/bookings/" + bookingId)
-                .request()
+                .request().header("Authorization", AuthTestHelper.bearerToken(customerToken))
                 .get();
         assertEquals(404, verifyResponse.getStatus());
     }
@@ -429,7 +366,7 @@ class BookingResourceTest extends JerseyTest {
     void testDeleteBooking_NonExistentId_Returns404() {
         // When
         Response response = target("/api/bookings/999")
-                .request()
+                .request().header("Authorization", AuthTestHelper.bearerToken(customerToken))
                 .delete();
 
         // Then
@@ -444,7 +381,7 @@ class BookingResourceTest extends JerseyTest {
     void testContentType_ApplicationJson_Accepted() {
         // When
         Response response = target("/api/bookings")
-                .request(MediaType.APPLICATION_JSON)
+                .request(MediaType.APPLICATION_JSON).header("Authorization", AuthTestHelper.bearerToken(customerToken))
                 .get();
 
         // Then
@@ -457,7 +394,7 @@ class BookingResourceTest extends JerseyTest {
     void testResponse_HasCorrectContentType() {
         // When
         Response response = target("/api/bookings")
-                .request()
+                .request().header("Authorization", AuthTestHelper.bearerToken(customerToken))
                 .get();
 
         // Then

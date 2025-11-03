@@ -33,26 +33,7 @@ import java.net.URI;
  */
 public class App {
 
-    /**
-     * BASE_URI - Server binding address
-     *
-     * 0.0.0.0 vs localhost (127.0.0.1):
-     *
-     * 0.0.0.0 = "Listen on ALL network interfaces" (what we use)
-     * - Accepts connections from localhost, Docker, LAN, etc.
-     * - REQUIRED for Docker containers to accept external connections
-     * - More flexible for different deployment scenarios
-     *
-     * 127.0.0.1 = "Listen only on loopback interface"
-     * - Only accepts connections from same machine
-     * - Would BREAK Docker deployment (can't reach from host)
-     *
-     * CLIENT ACCESS:
-     * Even though server binds to 0.0.0.0, clients use:
-     * - http://localhost:8080/api/movies (local access)
-     * - http://<machine-ip>:8080/api/movies (remote access)
-     */
-    private static final String BASE_URI = "http://0.0.0.0:8080/";
+    public static String BASE_URI;
 
     /**
      * Static service instances shared across all REST resources.
@@ -152,16 +133,13 @@ public class App {
         System.out.println("=== Database Initialization Complete ===\n");
     }
 
-    /**
-     * Starts Grizzly HTTP server exposing JAX-RS resources.
-     */
-    public static HttpServer startServer() {
+    public static HttpServer startServer(URI baseUri) {
         // Create a resource config that scans for JAX-RS resources and config
         final ResourceConfig rc = new ResourceConfig()
                 .packages("moviebooking");
 
         // Create and start a new instance of grizzly http server
-        return GrizzlyHttpServerFactory.createHttpServer(URI.create(BASE_URI), rc);
+        return GrizzlyHttpServerFactory.createHttpServer(baseUri, rc);
     }
 
     /**
@@ -177,14 +155,18 @@ public class App {
         // Step 1: Initialize database persistence
         initializeDatabase();
 
+        // Get port from environment variable, default to 8080
+        int port = Optional.ofNullable(System.getenv("PORT"))
+                .map(Integer::parseInt)
+                .orElse(8080);
+
+        BASE_URI = "http://0.0.0.0:" + port + "/";
+
         // Step 2: Start HTTP server
-        final HttpServer server = startServer();
+        final HttpServer server = startServer(URI.create(BASE_URI));
         System.out.println("=== Movie Booking API Started ===");
         System.out.println("Server binding: " + BASE_URI + " (all interfaces)");
-        System.out.println("API Endpoints:");
-        System.out.println("  Movies:   http://localhost:8080/api/movies");
-        System.out.println("  Bookings: http://localhost:8080/api/bookings");
-        System.out.println("Database file: ./data/moviebooking.mv.db");
+        System.out.println("API available at " + BASE_URI + "api");
         System.out.println("Press CTRL+C to stop the server...\n");
 
         // Step 3: Register shutdown hook to close EntityManagerFactory

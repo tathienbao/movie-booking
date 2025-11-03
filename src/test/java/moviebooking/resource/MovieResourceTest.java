@@ -6,6 +6,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import moviebooking.model.Movie;
 import moviebooking.TestConfig;
+import moviebooking.util.AuthTestHelper;
 import moviebooking.util.JsonTestHelper;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.test.JerseyTest;
@@ -25,10 +26,22 @@ import static org.junit.jupiter.api.Assertions.*;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class MovieResourceTest extends JerseyTest {
 
+    private AuthTestHelper authHelper;
+    private String adminToken;
+
     @Override
     protected Application configure() {
         // Configure Jersey to scan for REST resources
         return new ResourceConfig().packages("moviebooking");
+    }
+
+    @BeforeEach
+    @Override
+    public void setUp() throws Exception {
+        super.setUp();
+        // Initialize auth helper and get admin token (for create/update/delete)
+        authHelper = new AuthTestHelper(this);
+        adminToken = authHelper.getAdminToken();
     }
 
     @BeforeAll
@@ -136,9 +149,7 @@ class MovieResourceTest extends JerseyTest {
             """;
 
         // When
-        Response response = target("/api/movies")
-            .request(MediaType.APPLICATION_JSON)
-            .post(Entity.json(movieJson));
+        Response response = target("/api/movies").request(MediaType.APPLICATION_JSON).header("Authorization", AuthTestHelper.bearerToken(adminToken)).post(Entity.json(movieJson));
 
         // Then
         assertEquals(201, response.getStatus());
@@ -161,9 +172,7 @@ class MovieResourceTest extends JerseyTest {
             """;
 
         // When
-        Response response = target("/api/movies")
-            .request(MediaType.APPLICATION_JSON)
-            .post(Entity.json(invalidJson));
+        Response response = target("/api/movies").request(MediaType.APPLICATION_JSON).header("Authorization", AuthTestHelper.bearerToken(adminToken)).post(Entity.json(invalidJson));
 
         // Then
         // Should be 400 (Bad Request) or 500 (Internal Server Error from validation)
@@ -189,9 +198,7 @@ class MovieResourceTest extends JerseyTest {
             """, longTitle);
 
         // When
-        Response response = target("/api/movies")
-            .request(MediaType.APPLICATION_JSON)
-            .post(Entity.json(movieJson));
+        Response response = target("/api/movies").request(MediaType.APPLICATION_JSON).header("Authorization", AuthTestHelper.bearerToken(adminToken)).post(Entity.json(movieJson));
 
         // Then - validation should fail
         int status = response.getStatus();
@@ -215,9 +222,7 @@ class MovieResourceTest extends JerseyTest {
             """;
 
         // When
-        Response response = target("/api/movies")
-            .request(MediaType.APPLICATION_JSON)
-            .post(Entity.json(movieJson));
+        Response response = target("/api/movies").request(MediaType.APPLICATION_JSON).header("Authorization", AuthTestHelper.bearerToken(adminToken)).post(Entity.json(movieJson));
 
         // Then
         assertTrue(response.getStatus() >= 400);
@@ -252,9 +257,7 @@ class MovieResourceTest extends JerseyTest {
             """;
 
         // When
-        Response response = target("/api/movies/" + movieId)
-            .request(MediaType.APPLICATION_JSON)
-            .put(Entity.json(movieJson));
+        Response response = target("/api/movies/" + movieId).request(MediaType.APPLICATION_JSON).header("Authorization", AuthTestHelper.bearerToken(adminToken)).put(Entity.json(movieJson));
 
         // Then
         assertEquals(200, response.getStatus());
@@ -281,6 +284,7 @@ class MovieResourceTest extends JerseyTest {
         // When
         Response response = target("/api/movies/999")
             .request(MediaType.APPLICATION_JSON)
+            .header("Authorization", AuthTestHelper.bearerToken(adminToken))
             .put(Entity.json(movieJson));
 
         // Then
@@ -303,18 +307,14 @@ class MovieResourceTest extends JerseyTest {
             }
             """;
 
-        Response createResponse = target("/api/movies")
-            .request(MediaType.APPLICATION_JSON)
-            .post(Entity.json(movieJson));
+        Response createResponse = target("/api/movies").request(MediaType.APPLICATION_JSON).header("Authorization", AuthTestHelper.bearerToken(adminToken)).post(Entity.json(movieJson));
 
         String createdJson = createResponse.readEntity(String.class);
         Long movieId = JsonTestHelper.extractMovieId(createdJson);
         assertNotNull(movieId, "Created movie should have an ID");
 
         // When - delete the movie we just created
-        Response response = target("/api/movies/" + movieId)
-            .request()
-            .delete();
+        Response response = target("/api/movies/" + movieId).request().header("Authorization", AuthTestHelper.bearerToken(adminToken)).delete();
 
         // Then
         assertEquals(204, response.getStatus());
@@ -327,6 +327,7 @@ class MovieResourceTest extends JerseyTest {
         // When
         Response response = target("/api/movies/999")
             .request()
+            .header("Authorization", AuthTestHelper.bearerToken(adminToken))
             .delete();
 
         // Then

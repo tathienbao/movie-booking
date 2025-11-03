@@ -69,6 +69,14 @@ export const useAuthStore = defineStore('auth', {
       this.user = null
       this.isAuthenticated = false
       this.error = null
+
+      // Clear other stores to prevent data leakage
+      const { useMovieStore } = require('./movieStore')
+      const { useBookingStore } = require('./bookingStore')
+      const movieStore = useMovieStore()
+      const bookingStore = useBookingStore()
+      movieStore.$reset()
+      bookingStore.$reset()
     },
 
     clearError() {

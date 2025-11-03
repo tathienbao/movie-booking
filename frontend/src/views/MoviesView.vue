@@ -113,6 +113,7 @@
 
 <script setup>
 import { onMounted, reactive } from 'vue'
+import { Modal } from 'bootstrap'
 import { useMovieStore } from '../stores/movieStore'
 import { useAuthStore } from '../stores/authStore'
 
@@ -136,8 +137,10 @@ const handleAddMovie = async () => {
     await movieStore.createMovie(newMovie)
     // Close modal
     const modal = document.getElementById('addMovieModal')
-    const bootstrapModal = bootstrap.Modal.getInstance(modal)
-    bootstrapModal.hide()
+    const bootstrapModal = Modal.getInstance(modal)
+    if (bootstrapModal) {
+      bootstrapModal.hide()
+    }
     // Reset form
     Object.assign(newMovie, {
       title: '',

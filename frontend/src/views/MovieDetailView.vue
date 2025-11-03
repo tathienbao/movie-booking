@@ -153,6 +153,7 @@
 <script setup>
 import { ref, computed, onMounted, reactive } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { Modal } from 'bootstrap'
 import { useMovieStore } from '../stores/movieStore'
 import { useBookingStore } from '../stores/bookingStore'
 import { useAuthStore } from '../stores/authStore'
@@ -211,8 +212,10 @@ const handleUpdate = async () => {
   try {
     await movieStore.updateMovie(movie.value.id, editForm)
     const modal = document.getElementById('editMovieModal')
-    const bootstrapModal = bootstrap.Modal.getInstance(modal)
-    bootstrapModal.hide()
+    const bootstrapModal = Modal.getInstance(modal)
+    if (bootstrapModal) {
+      bootstrapModal.hide()
+    }
   } catch (error) {
     console.error('Update failed:', error)
   }

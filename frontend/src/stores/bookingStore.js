@@ -35,6 +35,7 @@ export const useBookingStore = defineStore('booking', {
         this.bookings = response.data
       } catch (error) {
         this.error = error.response?.data?.error || 'Failed to fetch bookings'
+        this.bookings = [] // Clear bookings on error
         throw error
       } finally {
         this.loading = false

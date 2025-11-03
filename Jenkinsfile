@@ -20,6 +20,9 @@ pipeline {
         }
 
         stage('Test') {
+            environment {
+                JWT_SECRET_KEY = 'test-secret-key-for-automated-testing-min-48-chars-long-secure'
+            }
             steps {
                 sh 'mvn test'
             }
@@ -34,7 +37,7 @@ pipeline {
 
         stage('Run Integration Test') {
             steps {
-                sh 'docker run -d -p 8081:8080 --name test-container movie-booking-api:latest'
+                sh 'docker run -d -p 8081:8080 -e JWT_SECRET_KEY="test-secret-key-for-automated-testing-min-48-chars-long-secure" --name test-container movie-booking-api:latest'
                 sh 'sleep 10'
                 sh 'curl -f http://localhost:8081/api/movies || exit 1'
                 sh 'docker stop test-container && docker rm test-container'

@@ -51,6 +51,24 @@ public class JsonTestHelper {
     }
 
     /**
+     * Extract booking ID from a single booking JSON object.
+     *
+     * @param jsonObject JSON object string (e.g., "{\"id\":1,...}")
+     * @return The booking ID
+     */
+    public static Long extractBookingId(String jsonObject) {
+        try {
+            JsonNode root = objectMapper.readTree(jsonObject);
+            if (root.has("id")) {
+                return root.get("id").asLong();
+            }
+            return null;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to parse JSON: " + jsonObject, e);
+        }
+    }
+
+    /**
      * Check if JSON string contains a specific field.
      *
      * @param json JSON string

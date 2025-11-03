@@ -9,6 +9,8 @@ main (Production-ready core backend)
 ├── feature/core-backend-solid-foundation
 ├── feature/database-persistence
 ├── feature/automated-testing
+├── feature/booking-api
+├── feature/authentication
 └── feature/vuejs-frontend
 ```
 
@@ -56,7 +58,7 @@ main (Production-ready core backend)
 ---
 
 ### `feature/database-persistence` - Data Engineering
-**Status:** 🚧 In Development
+**Status:** ✅ Complete
 
 **What Will Be Added:**
 - H2 database integration
@@ -83,7 +85,7 @@ main (Production-ready core backend)
 ---
 
 ### `feature/automated-testing` - Quality Assurance
-**Status:** 🚧 In Development
+**Status:** ✅ Complete
 
 **What Will Be Added:**
 - JUnit 5 unit tests
@@ -114,8 +116,89 @@ main (Production-ready core backend)
 
 ---
 
+### `feature/booking-api` - Booking Management
+**Status:** ✅ Complete
+
+**What Was Added:**
+- Complete Booking API with CRUD operations
+- Booking entity with JPA persistence
+- Booking service layer with validation
+- REST endpoints for booking management
+- Comprehensive booking tests
+
+**Tech Stack Additions:**
+- Booking entity (@ManyToOne relationships)
+- BookingRepository with JPA
+- BookingService with business logic
+- BookingResource REST endpoints
+
+**Features:**
+- Create bookings for movies
+- View all bookings
+- Get bookings by ID
+- Get bookings by movie ID
+- Cancel bookings
+- Validation and error handling
+
+**Learning Outcomes:**
+- Entity relationships (Movie-Booking @ManyToOne)
+- Complex service layer logic
+- REST API best practices
+- Business validation rules
+
+**Use Case:** Demonstrates ability to implement complete feature with database relationships
+
+---
+
+### `feature/authentication` - Security & RBAC
+**Status:** ✅ Complete (Current Branch)
+
+**What Was Added:**
+- JWT-based authentication with HS384 algorithm
+- Role-Based Access Control (RBAC) - CUSTOMER and ADMIN roles
+- User registration and login
+- Password hashing with BCrypt (cost factor 12)
+- Secure token generation and validation
+- Protected endpoints with Bearer authentication
+- Admin-only operations
+- Comprehensive security tests (171/172 passing)
+- Security fixes (environment-based JWT secret, path matching)
+
+**Tech Stack Additions:**
+- JWT (JSON Web Tokens) with jjwt library
+- BCrypt password hashing
+- User entity with role management
+- UserRepository with JPA
+- AuthService for authentication
+- JwtAuthenticationFilter for request filtering
+- JwtUtil for token operations
+
+**Security Features:**
+- JWT tokens with 24-hour expiration
+- Environment variable for JWT secret (not hardcoded)
+- Password validation (min 8 chars, letter + number)
+- Email validation and case-insensitive login
+- Protected endpoints with proper authorization
+- Admin-only movie CRUD operations
+- Customer role for bookings
+
+**Documentation Added:**
+- 09-understanding-automated-testing.md (updated with auth testing)
+- 10-understanding-authentication-authorization.md (comprehensive security guide)
+
+**Learning Outcomes:**
+- JWT authentication implementation
+- RBAC and authorization patterns
+- Password security and hashing
+- Security best practices
+- Authentication testing strategies
+
+**Use Case:** Demonstrates enterprise-level security implementation and authentication knowledge
+
+---
+
 ### `feature/vuejs-frontend` - Full-Stack Development
-**Status:** 🚧 In Development
+**Status:** 🚧 Planned
 
 **What Will Be Added:**
 - Vue.js 3 frontend application
@@ -188,8 +271,10 @@ main (Production-ready core backend)
 |--------|--------|----------|----------------|
 | `main` | ✅ Complete | - | Done |
 | `feature/core-backend-solid-foundation` | ✅ Complete | Reference | Done |
-| `feature/database-persistence` | 🚧 In Progress | High | 1 hour |
-| `feature/automated-testing` | 🚧 Planned | High | 1 hour |
+| `feature/database-persistence` | ✅ Complete | - | Done |
+| `feature/automated-testing` | ✅ Complete | - | Done |
+| `feature/booking-api` | ✅ Complete | - | Done |
+| `feature/authentication` | ✅ Complete | Current | Done |
 | `feature/vuejs-frontend` | 🚧 Planned | Medium | 2-3 hours |
 
 ---
@@ -205,12 +290,18 @@ main (Production-ready core backend)
    - "Here I added database persistence with JPA/Hibernate"
 
 3. **Show `feature/automated-testing`** - Highlight quality practices
-   - "I believe in automated testing, so I added comprehensive test coverage"
+   - "I believe in automated testing, so I added comprehensive test coverage (172 tests)"
 
-4. **Show `feature/vuejs-frontend`** - Prove full-stack capability
+4. **Show `feature/booking-api`** - Demonstrate feature implementation
+   - "I implemented a complete Booking API with entity relationships and business logic"
+
+5. **Show `feature/authentication`** - Showcase security expertise
+   - "I added enterprise-level JWT authentication with RBAC and comprehensive security"
+
+6. **Show `feature/vuejs-frontend`** (when complete) - Prove full-stack capability
    - "I built a Vue.js 3 frontend to demonstrate my full-stack skills"
 
-**Key Message:** "I organized the project in branches to show progression from core backend to full-stack application"
+**Key Message:** "I organized the project in branches to show progression from core backend through security to full-stack application"
 
 ---
 
@@ -223,7 +314,11 @@ main (Production-ready core backend)
 | **CI/CD (Jenkins, Docker, K8s)** | `main` | ✅ |
 | **Git** | All branches | ✅ |
 | **REST** | `main` | ✅ |
-| **Automated Tests** | `feature/automated-testing` | 🚧 |
+| **JPA/Hibernate** | `feature/database-persistence` | ✅ |
+| **Automated Tests (172 tests)** | `feature/automated-testing` | ✅ |
+| **JWT Authentication** | `feature/authentication` | ✅ |
+| **RBAC (Role-Based Access)** | `feature/authentication` | ✅ |
+| **Security Best Practices** | `feature/authentication` | ✅ |
 | **Vue.js 3** | `feature/vuejs-frontend` | 🚧 |
 
 ---

@@ -1,9 +1,10 @@
-# Movie Booking REST API
+# Movie Booking Full-Stack Application
 
-A Jakarta EE 10 REST API demo project built with JAX-RS, Jersey, and Grizzly HTTP Server.
+A complete full-stack application with Jakarta EE 10 backend and Vue.js 3 frontend for movie booking management.
 
 ## 🚀 Tech Stack
 
+### Backend
 - **Java 17**
 - **Jakarta EE 10** - Enterprise Java specification
 - **JAX-RS** - REST API framework
@@ -15,6 +16,14 @@ A Jakarta EE 10 REST API demo project built with JAX-RS, Jersey, and Grizzly HTT
 - **JWT Authentication** - Secure token-based authentication
 - **BCrypt** - Password hashing for security
 - **JUnit 5 & Mockito** - Comprehensive testing (172 tests)
+
+### Frontend
+- **Vue.js 3.5.22** - Progressive JavaScript framework
+- **Vue Router 4.6.3** - SPA routing with navigation guards
+- **Pinia 3.0.3** - State management
+- **Axios 1.13.1** - HTTP client with interceptors
+- **Bootstrap 5.3.8** - Responsive UI framework
+- **Vite 7.1.7** - Lightning-fast build tool
 
 ## 📋 API Endpoints
 
@@ -53,9 +62,31 @@ A Jakarta EE 10 REST API demo project built with JAX-RS, Jersey, and Grizzly HTT
 
 ## 🏃 Running the Application
 
-### Option 1: Automated Local Development (Recommended)
+### Full-Stack Development
 
-**One command to build, run, and test everything:**
+**Terminal 1 - Backend:**
+```bash
+export JWT_SECRET_KEY="test-secret-key-for-automated-testing-min-48-chars-long-secure"
+mvn exec:java -Dexec.mainClass="moviebooking.App"
+# Backend runs on http://localhost:8080
+```
+
+**Terminal 2 - Frontend:**
+```bash
+cd frontend
+npm install  # First time only
+npm run dev
+# Frontend runs on http://localhost:5173
+```
+
+**Access the application:**
+- Frontend UI: http://localhost:5173
+- Backend API: http://localhost:8080/api
+- Demo admin: admin@example.com / admin123
+
+### Backend Only Options
+
+**Option 1: Automated Local Development (Recommended)**
 
 ```bash
 ./scripts/run-local.sh
@@ -69,30 +100,26 @@ This script automatically:
 - Tests the API
 - Shows you the status
 
-**Quick API test (when already running):**
+**Option 2: Maven**
 
 ```bash
-./scripts/test-api.sh
-```
-
-### Option 2: Maven
-
-```bash
+export JWT_SECRET_KEY="your-secret-key-min-48-chars-here"
 mvn exec:java -Dexec.mainClass="moviebooking.App"
 ```
 
-### Option 3: Standalone JAR
+**Option 3: Standalone JAR**
 
 ```bash
+export JWT_SECRET_KEY="your-secret-key-min-48-chars-here"
 mvn clean package
 java -jar target/movie-booking-api-1.0.0.jar
 ```
 
-### Option 4: Docker Manual
+**Option 4: Docker Manual**
 
 ```bash
 docker build -t movie-booking-api .
-docker run -p 8080:8080 movie-booking-api
+docker run -p 8080:8080 -e JWT_SECRET_KEY="your-secret-key" movie-booking-api
 ```
 
 ## 🧪 Testing the API

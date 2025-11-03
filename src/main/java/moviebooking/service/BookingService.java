@@ -2,8 +2,10 @@ package moviebooking.service;
 
 import moviebooking.model.Booking;
 import moviebooking.model.Movie;
+import moviebooking.model.User;
 import moviebooking.repository.BookingRepository;
 import moviebooking.repository.MovieRepository;
+import moviebooking.repository.UserRepository;
 
 import java.util.List;
 import java.util.Objects;
@@ -31,6 +33,7 @@ public class BookingService {
 
     private final BookingRepository bookingRepository;
     private final MovieRepository movieRepository;
+    private final UserRepository userRepository;
 
     // Email validation pattern (basic RFC 5322 compliance)
     private static final Pattern EMAIL_PATTERN = Pattern.compile(
@@ -49,17 +52,21 @@ public class BookingService {
      * - Flexible (can swap repository implementation)
      * - Clear dependencies (visible in constructor)
      *
-     * NOTE: We need both BookingRepository and MovieRepository because
-     * when creating a booking, we must verify the movie exists.
+     * NOTE: We need BookingRepository, MovieRepository, and UserRepository because:
+     * - BookingRepository: Save/retrieve bookings
+     * - MovieRepository: Verify movie exists
+     * - UserRepository: Verify user exists and get user details
      *
      * CRITICAL FIX: Input validation
      * Added null checks to prevent NPE if called with null repositories.
      */
-    public BookingService(BookingRepository bookingRepository, MovieRepository movieRepository) {
+    public BookingService(BookingRepository bookingRepository, MovieRepository movieRepository, UserRepository userRepository) {
         this.bookingRepository = Objects.requireNonNull(bookingRepository,
                 "BookingRepository cannot be null. Service requires valid repository instance.");
         this.movieRepository = Objects.requireNonNull(movieRepository,
                 "MovieRepository cannot be null. Service requires valid repository instance.");
+        this.userRepository = Objects.requireNonNull(userRepository,
+                "UserRepository cannot be null. Service requires valid repository instance.");
     }
 
     /**
@@ -96,7 +103,61 @@ public class BookingService {
     }
 
     /**
-     * Create a new booking.
+     * Create a new booking for an authenticated user.
+     *
+     * BUSINESS LOGIC:
+     * - Validation: Check user exists, movie exists, seats > 0
+     * - Get user details from UserRepository
+     * - Calculate total price: movie price * number of seats
+     *
+     * COORDINATION: Uses all three repositories
+     * - UserRepository: Get user details
+     * - MovieRepository: Verify movie exists
+     * - BookingRepository: Save the booking
+     *
+     * @param userId ID of the user making the booking
+     * @param movieId ID of the movie to book
+     * @param numberOfSeats Number of seats to book
+     * @return Created booking
+     */
+    public Booking createBooking(Long userId, Long movieId, Integer numberOfSeats) {
+        // VALIDATION: Null checks
+        Objects.requireNonNull(userId, "User ID cannot be null");
+        Objects.requireNonNull(movieId, "Movie ID cannot be null");
+        Objects.requireNonNull(numberOfSeats, "Number of seats cannot be null");
+
+        // VALIDATION: Number of seats
+        if (numberOfSeats <= 0) {
+            throw new IllegalArgumentException("Number of seats must be positive (got: " + numberOfSeats + ")");
+        }
+        if (numberOfSeats > 100) {
+            throw new IllegalArgumentException("Number of seats too high (max 100 seats per booking, got: " + numberOfSeats + ")");
+        }
+
+        // BUSINESS LOGIC: Verify user exists
+        User user = userRepository.findById(userId);
+        if (user == null) {
+            throw new IllegalArgumentException("User not found with ID: " + userId);
+        }
+
+        // BUSINESS LOGIC: Verify movie exists
+        Movie movie = movieRepository.findById(movieId);
+        if (movie == null) {
+            throw new IllegalArgumentException("Movie not found with ID: " + movieId);
+        }
+
+        // CREATE: Build booking with validated data
+        // The Booking constructor calculates totalPrice automatically
+        Booking booking = new Booking(user, movie, numberOfSeats);
+
+        // SAVE: Persist to database
+        return bookingRepository.save(booking);
+    }
+
+    /**
+     * Create a new booking (legacy method for backward compatibility with tests).
+     *
+     * @deprecated Use createBooking(Long userId, Long movieId, Integer numberOfSeats) instead
      *
      * BUSINESS LOGIC:
      * - Validation: Check customer name/email, movie exists, seats > 0
@@ -115,6 +176,7 @@ public class BookingService {
      * - MovieRepository: Verify movie exists
      * - BookingRepository: Save the booking
      */
+    @Deprecated
     public Booking createBooking(Long movieId, String customerName, String customerEmail, Integer numberOfSeats) {
         // VALIDATION: Null checks
         Objects.requireNonNull(movieId, "Movie ID cannot be null");

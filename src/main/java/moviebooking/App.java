@@ -4,6 +4,8 @@ import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.Persistence;
 import moviebooking.repository.BookingRepository;
 import moviebooking.repository.MovieRepository;
+import moviebooking.repository.UserRepository;
+import moviebooking.service.AuthService;
 import moviebooking.service.BookingService;
 import moviebooking.service.MovieService;
 import org.glassfish.grizzly.http.server.HttpServer;
@@ -66,6 +68,7 @@ public class App {
      */
     private static MovieService movieService;
     private static BookingService bookingService;
+    private static AuthService authService;
     private static EntityManagerFactory entityManagerFactory;
 
     /**
@@ -80,6 +83,13 @@ public class App {
      */
     public static BookingService getBookingService() {
         return bookingService;
+    }
+
+    /**
+     * Get the AuthService instance (used by REST resources).
+     */
+    public static AuthService getAuthService() {
+        return authService;
     }
 
     /**
@@ -109,18 +119,35 @@ public class App {
         BookingRepository bookingRepository = new BookingRepository(entityManagerFactory);
         System.out.println("✅ BookingRepository created");
 
+        System.out.println("Creating UserRepository...");
+        UserRepository userRepository = new UserRepository(entityManagerFactory);
+        System.out.println("✅ UserRepository created");
+
         // Step 3: Create Services
         System.out.println("Creating MovieService...");
         movieService = new MovieService(movieRepository);
         System.out.println("✅ MovieService created");
 
         System.out.println("Creating BookingService...");
-        bookingService = new BookingService(bookingRepository, movieRepository);
+        bookingService = new BookingService(bookingRepository, movieRepository, userRepository);
         System.out.println("✅ BookingService created");
+
+        System.out.println("Creating AuthService...");
+        authService = new AuthService(userRepository);
+        System.out.println("✅ AuthService created");
 
         // Step 4: Initialize sample data
         System.out.println("Initializing sample data...");
         movieRepository.initializeSampleData();
+
+        // Step 5: Create default admin user (for testing)
+        System.out.println("Creating default admin user...");
+        try {
+            authService.register("admin@example.com", "Admin User", "admin123", moviebooking.model.Role.ADMIN);
+            System.out.println("✅ Default admin user created (admin@example.com / admin123)");
+        } catch (Exception e) {
+            System.out.println("ℹ️  Admin user already exists or creation failed: " + e.getMessage());
+        }
 
         System.out.println("=== Database Initialization Complete ===\n");
     }

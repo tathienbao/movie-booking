@@ -3,6 +3,7 @@ package moviebooking.service;
 import moviebooking.model.Movie;
 import moviebooking.repository.BookingRepository;
 import moviebooking.repository.MovieRepository;
+import moviebooking.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
@@ -31,13 +32,16 @@ class BookingServiceEdgeCaseTest {
     @Mock
     private MovieRepository mockMovieRepository;
 
+    @Mock
+    private UserRepository mockUserRepository;
+
     private BookingService bookingService;
 
     private Movie testMovie;
 
     @BeforeEach
     void setUp() {
-        bookingService = new BookingService(mockBookingRepository, mockMovieRepository);
+        bookingService = new BookingService(mockBookingRepository, mockMovieRepository, mockUserRepository);
 
         // Create a test movie
         testMovie = new Movie("Inception", "Dream heist", "Sci-Fi", 148, 12.50);

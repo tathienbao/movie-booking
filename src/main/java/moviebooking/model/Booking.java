@@ -17,6 +17,16 @@ public class Booking {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /**
+     * The user who made this booking.
+     *
+     * @JsonBackReference prevents infinite recursion when serializing
+     */
+    @ManyToOne
+    @JoinColumn(name = "user_id", nullable = false)
+    @JsonBackReference
+    private User user;
+
     @Column(nullable = false)
     private String customerName;
 
@@ -65,7 +75,34 @@ public class Booking {
      *
      * CRITICAL FIX: Null pointer prevention
      * Added validation to prevent NPE when accessing movie.getPrice()
+     *
+     * NOTE: This constructor populates customerName and customerEmail from the User object
+     * for backward compatibility and denormalization (faster queries without joins)
      */
+    public Booking(User user, Movie movie, Integer numberOfSeats) {
+        // VALIDATION: Prevent NPE
+        Objects.requireNonNull(user, "User cannot be null");
+        Objects.requireNonNull(movie, "Movie cannot be null");
+        Objects.requireNonNull(numberOfSeats, "Number of seats cannot be null");
+
+        if (numberOfSeats <= 0) {
+            throw new IllegalArgumentException("Number of seats must be positive");
+        }
+
+        this.user = user;
+        this.customerName = user.getName();
+        this.customerEmail = user.getEmail();
+        this.movie = movie;
+        this.numberOfSeats = numberOfSeats;
+        this.bookingTime = LocalDateTime.now();
+        this.totalPrice = movie.getPrice() * numberOfSeats;
+    }
+
+    /**
+     * Legacy constructor for backward compatibility with tests.
+     * @deprecated Use Booking(User, Movie, Integer) instead
+     */
+    @Deprecated
     public Booking(String customerName, String customerEmail, Movie movie, Integer numberOfSeats) {
         // VALIDATION: Prevent NPE
         Objects.requireNonNull(movie, "Movie cannot be null");
@@ -90,6 +127,18 @@ public class Booking {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        Objects.requireNonNull(user, "User cannot be null");
+        this.user = user;
+        // Update denormalized fields
+        this.customerName = user.getName();
+        this.customerEmail = user.getEmail();
     }
 
     public String getCustomerName() {

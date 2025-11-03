@@ -41,6 +41,9 @@ public class TestConfig {
             BookingRepository bookingRepository = new BookingRepository(entityManagerFactory);
             UserRepository userRepository = new UserRepository(entityManagerFactory);
 
+            // Initialize sample data (movies) for tests
+            movieRepository.initializeSampleData();
+
             // Create services
             movieService = new MovieService(movieRepository);
             bookingService = new BookingService(bookingRepository, movieRepository, userRepository);

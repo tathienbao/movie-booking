@@ -25,13 +25,15 @@ jobs:
 
     - name: Run tests
       run: mvn test
+      env:
+        JWT_SECRET_KEY: test-secret-key-for-automated-testing-min-48-chars-long-secure
 
     - name: Build Docker image
       run: docker build -t movie-booking-api:${{ github.sha }} .
 
     - name: Test Docker image
       run: |
-        docker run -d -p 8080:8080 --name test-container movie-booking-api:${{ github.sha }}
+        docker run -d -p 8080:8080 -e JWT_SECRET_KEY="test-secret-key-for-automated-testing-min-48-chars-long-secure" --name test-container movie-booking-api:${{ github.sha }}
         echo "Waiting for application to start..."
         sleep 15
         echo "Testing API endpoint..."

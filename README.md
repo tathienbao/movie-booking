@@ -2,6 +2,16 @@
 
 A complete full-stack application with Jakarta EE 10 backend and Vue.js 3 frontend for movie booking management.
 
+## 🌐 Live Demo
+
+**Production Deployment:**
+- **Frontend:** https://movie-booking-cyan-five.vercel.app/ (Deployed on Vercel)
+- **Backend API:** https://movie-booking-yq8p.onrender.com/api (Deployed on Render)
+
+**Try it out:**
+- Register a new account or use demo admin credentials
+- Admin: `admin@example.com` / `admin123`
+
 ## 🚀 Tech Stack
 
 ### Backend
@@ -24,6 +34,11 @@ A complete full-stack application with Jakarta EE 10 backend and Vue.js 3 fronte
 - **Axios 1.13.1** - HTTP client with interceptors
 - **Bootstrap 5.3.8** - Responsive UI framework
 - **Vite 7.1.7** - Lightning-fast build tool
+
+### Deployment
+- **Backend:** Render (Cloud Platform)
+- **Frontend:** Vercel (Edge Network)
+- **CI/CD:** GitHub Actions + Automated deployments
 
 ## 📋 API Endpoints
 
@@ -208,12 +223,16 @@ src/
         └── util/            # Test helpers
 ```
 
-## 🔄 CI/CD
+## 🔄 CI/CD & Deployment
 
-This project includes:
-
-- **Jenkinsfile** - For Jenkins CI/CD pipelines
+**Continuous Integration:**
 - **GitHub Actions** - `.github/workflows/ci.yml` for automated testing
+- **Jenkinsfile** - For Jenkins CI/CD pipelines
+
+**Production Deployment:**
+- **Backend:** Deployed on [Render](https://render.com) with automatic deployments from main branch
+- **Frontend:** Deployed on [Vercel](https://vercel.com) with automatic deployments from main branch
+- Environment variables configured for JWT secret and database persistence
 
 ## 🐳 Docker
 
@@ -245,6 +264,7 @@ curl http://localhost:8080/api/movies
 
 ## 🎯 Features
 
+- ✅ **Production Deployment** - Live on Render (backend) + Vercel (frontend)
 - ✅ RESTful API design (Authentication, Movie & Booking endpoints)
 - ✅ **JWT Authentication** with secure token-based auth
 - ✅ **Role-Based Access Control (RBAC)** - CUSTOMER and ADMIN roles
@@ -257,7 +277,7 @@ curl http://localhost:8080/api/movies
 - ✅ Automated testing (172 tests: unit, integration, auth, RBAC, edge cases)
 - ✅ Docker support with multi-stage builds
 - ✅ Kubernetes deployment ready
-- ✅ CI/CD ready (GitHub Actions + Jenkins)
+- ✅ CI/CD with GitHub Actions + automated deployments
 - ✅ Standalone executable JAR
 
 ### Security Features

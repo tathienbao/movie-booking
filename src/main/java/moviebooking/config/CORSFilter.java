@@ -14,9 +14,26 @@ public class CORSFilter implements ContainerRequestFilter, ContainerResponseFilt
 
     @Override
     public void filter(ContainerRequestContext requestContext) throws IOException {
-        // Handle preflight requests
+        // Handle preflight requests with CORS headers
         if (requestContext.getMethod().equalsIgnoreCase("OPTIONS")) {
-            requestContext.abortWith(Response.ok().build());
+            String origin = requestContext.getHeaderString("Origin");
+
+            Response.ResponseBuilder builder = Response.ok();
+
+            // Add CORS headers to OPTIONS response
+            if (origin != null && (
+                    origin.equals("https://movie-booking-cyan-five.vercel.app") ||
+                    origin.equals("http://localhost:5173") ||
+                    origin.equals("http://localhost:3000"))) {
+                builder.header("Access-Control-Allow-Origin", origin);
+                builder.header("Access-Control-Allow-Credentials", "true");
+            }
+
+            builder.header("Access-Control-Allow-Headers", "origin, content-type, accept, authorization");
+            builder.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, HEAD");
+            builder.header("Access-Control-Max-Age", "3600");
+
+            requestContext.abortWith(builder.build());
         }
     }
 

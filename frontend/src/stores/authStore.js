@@ -1,5 +1,7 @@
 import { defineStore } from 'pinia'
 import authService from '../api/authService'
+import { useMovieStore } from './movieStore'
+import { useBookingStore } from './bookingStore'
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -71,8 +73,6 @@ export const useAuthStore = defineStore('auth', {
       this.error = null
 
       // Clear other stores to prevent data leakage
-      const { useMovieStore } = require('./movieStore')
-      const { useBookingStore } = require('./bookingStore')
       const movieStore = useMovieStore()
       const bookingStore = useBookingStore()
       movieStore.$reset()

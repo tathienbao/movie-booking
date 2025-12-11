@@ -4,8 +4,8 @@ import jakarta.persistence.*;
 import java.util.Objects;
 
 /**
- * Movie entity representing a movie in the booking system.
- * Uses JPA annotations for database persistence.
+ * Movie entity representing a movie in the booking system. Uses JPA annotations
+ * for database persistence.
  */
 @Entity
 @Table(name = "movies")
@@ -57,8 +57,8 @@ public class Movie {
     }
 
     /**
-     * CRITICAL FIX: Setter validation
-     * Prevents bypassing service layer validation by calling setter directly.
+     * CRITICAL FIX: Setter validation Prevents bypassing service layer
+     * validation by calling setter directly.
      */
     public void setTitle(String title) {
         if (title == null || title.trim().isEmpty()) {
@@ -123,8 +123,12 @@ public class Movie {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
         Movie movie = (Movie) o;
         return Objects.equals(id, movie.id);
     }
@@ -136,12 +140,12 @@ public class Movie {
 
     @Override
     public String toString() {
-        return "Movie{" +
-                "id=" + id +
-                ", title='" + title + '\'' +
-                ", genre='" + genre + '\'' +
-                ", duration=" + durationMinutes + "min" +
-                ", price=$" + price +
-                '}';
+        return "Movie{"
+                + "id=" + id
+                + ", title='" + title + '\''
+                + ", genre='" + genre + '\''
+                + ", duration=" + durationMinutes + "min"
+                + ", price=$" + price
+                + '}';
     }
 }

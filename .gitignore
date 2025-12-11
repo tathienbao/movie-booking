@@ -37,3 +37,10 @@ hs_err_pid*
 # Database
 *.db
 *.h2.db
+
+# Learning/Planning Documentation (keep locally, don't commit)
+docs/learning-notes/
+BRANCHES.md
+FEATURE_DATABASE.md
+FEATURE_FRONTEND.md
+FEATURE_TESTING.md

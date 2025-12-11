@@ -208,17 +208,6 @@ src/
         └── util/            # Test helpers
 ```
 
-## 📚 Learning Resources
-
-Check the `/docs/learning-notes` folder for comprehensive explanations:
-
-1. **01-understanding-jpa-entities.md** - JPA Entity models
-2. **02-understanding-rest-endpoints.md** - REST API and JAX-RS
-3. **03-understanding-service-layer.md** - Business logic layer
-4. **04-understanding-application-startup.md** - Application startup
-5. **05-understanding-jar-files.md** - JAR files explained
-6. **06-understanding-maven-shade-plugin.md** - Fat JAR creation
-
 ## 🔄 CI/CD
 
 This project includes:

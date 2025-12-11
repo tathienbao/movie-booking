@@ -22,9 +22,18 @@ public class CORSFilter implements ContainerRequestFilter, ContainerResponseFilt
 
     @Override
     public void filter(ContainerRequestContext requestContext, ContainerResponseContext responseContext) throws IOException {
-        responseContext.getHeaders().add("Access-Control-Allow-Origin", "*");
+        String origin = requestContext.getHeaderString("Origin");
+
+        // Allow specific origins only
+        if (origin != null && (
+                origin.equals("https://movie-booking-cyan-five.vercel.app") ||
+                origin.equals("http://localhost:5173") ||
+                origin.equals("http://localhost:3000"))) {
+            responseContext.getHeaders().add("Access-Control-Allow-Origin", origin);
+            responseContext.getHeaders().add("Access-Control-Allow-Credentials", "true");
+        }
+
         responseContext.getHeaders().add("Access-Control-Allow-Headers", "origin, content-type, accept, authorization");
-        responseContext.getHeaders().add("Access-Control-Allow-Credentials", "true");
         responseContext.getHeaders().add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, HEAD");
     }
 }

@@ -39,6 +39,11 @@ public class CORSFilter implements ContainerRequestFilter, ContainerResponseFilt
 
     @Override
     public void filter(ContainerRequestContext requestContext, ContainerResponseContext responseContext) throws IOException {
+        // Skip if OPTIONS was already handled in request filter to avoid duplicate headers
+        if (requestContext.getMethod().equalsIgnoreCase("OPTIONS")) {
+            return;
+        }
+
         String origin = requestContext.getHeaderString("Origin");
 
         // Allow specific origins only
